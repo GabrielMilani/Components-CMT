@@ -1,0 +1,19 @@
+# Pastas de compilação/artefatos
+/dcu/
+/bin/
+
+# Outras pastas de histórico do Delphi
+/__history/
+/__recovery/
+
+# Arquivos temporários e backups
+*.dcu
+*.~*
+*.local
+*.identcache
+*.tvsconfig
+
+# Configurações locais do Delphi
+*.dproj.local
+*.groupproj.local
+*.deployproj.local
