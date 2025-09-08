@@ -1,0 +1,59 @@
+unit CMTRadioButton;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.StdCtrls, Vcl.Graphics, Winapi.Windows;
+
+type
+  TCMTRadioButton = class(TRadioButton)
+  private
+    FCaptionColor: TColor;
+    procedure SetCaptionColor(const Value: TColor);
+  protected
+    procedure Paint; override;
+  published
+    property CaptionColor: TColor read FCaptionColor write SetCaptionColor default clWindowText;
+  end;
+
+procedure Register;
+
+implementation
+
+{ TCMTRadioButton }
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTRadioButton]);
+end;
+
+procedure TCMTRadioButton.SetCaptionColor(const Value: TColor);
+begin
+  if FCaptionColor <> Value then
+  begin
+    FCaptionColor := Value;
+    Invalidate; // força redesenho
+  end;
+end;
+
+procedure TCMTRadioButton.Paint;
+var
+  R: TRect;
+  Flags: Longint;
+begin
+  inherited;
+
+  R := ClientRect;
+
+  // Ajusta a área para o caption (para não sobrescrever o círculo do radiobutton)
+  R.Left := R.Left + GetSystemMetrics(SM_CXMENUCHECK); // largura do "check" do rádio
+
+  Canvas.Font := Self.Font;
+  Canvas.Font.Color := FCaptionColor;
+
+  Flags := DT_LEFT or DT_VCENTER or DT_SINGLELINE;
+
+  DrawText(Canvas.Handle, PChar(Caption), -1, R, Flags);
+end;
+
+end.

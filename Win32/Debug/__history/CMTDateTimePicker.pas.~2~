@@ -1,0 +1,32 @@
+unit CMTDateTimePicker;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.ComCtrls;
+
+type
+  TCMTDateTimePicker = class(TDateTimePicker)
+  private
+    FIsEmpty: Boolean;
+    procedure SetIsEmpty(const Value: Boolean);
+  public
+    constructor Create(AOwner: TComponent); override;
+    procedure Clear;
+  published
+    property IsEmpty: Boolean read FIsEmpty write SetIsEmpty;
+    // Publica as propriedades importantes
+    property Date;
+    property Text;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTDateTimePicker]);
+end;
+
+end.

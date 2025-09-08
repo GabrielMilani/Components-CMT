@@ -1,0 +1,75 @@
+unit CMTRadioButton;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.StdCtrls, System.UITypes, Vcl.Forms;
+
+type
+  TCMTRadioButton = class(TRadioButton)
+  private
+    FTextColor: TColor;
+    procedure SetTextColor(const Value: TColor);
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure Paint; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+  published
+    property TextColor: TColor read FTextColor write SetTextColor;
+  end;
+
+procedure Register;
+
+implementation
+
+{ TCMTRadioButton }
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTRadioButton]);
+end;
+
+constructor TCMTRadioButton.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FTextColor := clWindowText;
+end;
+
+procedure TCMTRadioButton.SetTextColor(const Value: TColor);
+begin
+  if FTextColor <> Value then
+  begin
+    FTextColor := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TCMTRadioButton.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  // Adiciona o estilo WS_CLIPCHILDREN para evitar flickering
+  Params.Style := Params.Style or WS_CLIPCHILDREN;
+  // Adiciona o estilo estendido para desenho manual
+  Params.ExStyle := Params.ExStyle or WS_EX_COMPOSITED;
+end;
+
+procedure TCMTRadioButton.Paint;
+var
+  RadioRect: TRect;
+begin
+  // Primeiro, desenha o círculo padrão do Radio Button
+  inherited Paint;
+
+  // Em seguida, desenha o texto com a cor customizada
+  Canvas.Font.Color := FTextColor;
+  Canvas.Brush.Style := bsClear; // Fundo transparente
+
+  // A posição do texto precisa ser calculada
+  // O tamanho do círculo do radio button é constante
+  RadioRect := Rect(0, 0, 16, Height);
+
+  Canvas.TextRect(Rect(18, 0, Width, Height), Caption, [tfSingleLine, tfLeft, tfVCenter]);
+end;
+
+end.

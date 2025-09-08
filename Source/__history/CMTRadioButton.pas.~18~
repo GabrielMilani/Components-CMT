@@ -1,0 +1,72 @@
+unit CMTRadioButton;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.StdCtrls, System.UITypes,
+  Vcl.Forms, Winapi.Messages;
+
+type
+  TCMTRadioButton = class(TRadioButton)
+  private
+    FTextColor: TColor;
+    procedure SetTextColor(const Value: TColor);
+    procedure CMDrawing(var Message: TMessage); message CM_DRAWITEM; // <-- Add this
+  protected
+    procedure CreateParams(var Params: TCreateParams); override; // <-- Add this
+  public
+    constructor Create(AOwner: TComponent); override;
+  published
+    property TextColor: TColor read FTextColor write SetTextColor;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTRadioButton]);
+end;
+
+
+constructor TCMTRadioButton.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FTextColor := clWindowText;
+end;
+
+procedure TCMTRadioButton.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  Params.Style := Params.Style or BS_OWNERDRAW; // <-- Set the style to owner-drawn
+end;
+
+procedure TCMTRadioButton.SetTextColor(const Value: TColor);
+begin
+  if FTextColor <> Value then
+  begin
+    FTextColor := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TCMTRadioButton.CMDrawing(var Message: TMessage);
+var
+  DC: HDC;
+  LRect: TRect;
+begin
+  DC := TWMDrawItem(Message).DrawItemStruct.hDC;
+  LRect := TWMDrawItem(Message).DrawItemStruct.rcItem;
+
+  // Draw the default radio button circle
+  DrawFrameControl(DC, LRect, DFC_BUTTON, DFCS_BUTTONRADIO);
+
+  // Now, draw the text with your custom color
+  SetTextColor(DC, FTextColor);
+
+  // You might need to adjust the position here based on the radio button's size
+  TextOut(DC, LRect.Left + 20, LRect.Top + 2, PChar(Caption), Length(Caption));
+end;
+
+end.

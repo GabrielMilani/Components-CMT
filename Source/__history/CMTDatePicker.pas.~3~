@@ -1,0 +1,43 @@
+unit CMTDatePicker;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.ComCtrls, Winapi.Messages;
+
+type
+  TCMTDatePicker = class(TDateTimePicker)
+  private
+    FAllowEmpty: Boolean;
+    procedure WMChar(var Message: TWMChar); message WM_CHAR;
+  public
+    constructor Create(AOwner: TComponent); override;
+  published
+    property AllowEmpty: Boolean read FAllowEmpty write FAllowEmpty default True;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTDatePicker]);
+end;
+
+constructor TCMTDatePicker.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FAllowEmpty := True;
+  Kind := dtkDate;
+end;
+
+procedure TCMTDatePicker.WMChar(var Message: TWMChar);
+begin
+  inherited;
+  // Se permitir vazio e o usuário pressionar Backspace ou Delete
+  if FAllowEmpty and (Message.CharCode in [VK_BACK, VK_DELETE]) then
+    Text := '';
+end;
+
+end.

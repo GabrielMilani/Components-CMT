@@ -1,0 +1,64 @@
+unit CMTPageControl;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.ComCtrls, Winapi.Windows,
+  Vcl.Graphics;
+
+type
+  TCMTPageControl = class(TPageControl)
+  private
+    FBackground: TPicture;
+    procedure SetBackground(const Value: TPicture);
+  protected
+    procedure PaintWindow(DC: HDC); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+  published
+    property Background: TPicture read FBackground write SetBackground;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTPageControl]);
+end;
+
+
+constructor TCMTPageControl.Create(AOwner: TComponent);
+begin
+  inherited;
+  FBackground := TPicture.Create;
+end;
+
+destructor TCMTPageControl.Destroy;
+begin
+  FBackground.Free;
+  inherited;
+end;
+
+procedure TCMTPageControl.PaintWindow(DC: HDC);
+var
+  R: TRect;
+begin
+  inherited; // pinta o controle normalmente
+  if Assigned(FBackground.Graphic) then
+  begin
+    R := ClientRect;
+    Canvas.Handle := DC;
+    Canvas.StretchDraw(R, FBackground.Graphic);
+  end;
+end;
+
+procedure TCMTPageControl.SetBackground(const Value: TPicture);
+begin
+  FBackground.Assign(Value);
+  Invalidate; // força redesenho quando mudar a imagem
+end;
+
+end.

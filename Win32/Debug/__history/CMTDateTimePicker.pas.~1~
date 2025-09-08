@@ -1,0 +1,29 @@
+unit CMTDateTimePicker;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.ComCtrls;
+
+type
+  TCMTDateTimePicker = class(TDateTimePicker)
+  private
+    { Private declarations }
+  protected
+    { Protected declarations }
+  public
+    { Public declarations }
+  published
+    { Published declarations }
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTDateTimePicker]);
+end;
+
+end.

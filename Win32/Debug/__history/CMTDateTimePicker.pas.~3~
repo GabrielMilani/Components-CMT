@@ -1,0 +1,71 @@
+unit CMTDateTimePicker;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.ComCtrls;
+
+type
+  TCMTDateTimePicker = class(TDateTimePicker)
+  private
+    FIsEmpty: Boolean;
+    procedure SetIsEmpty(const Value: Boolean);
+  public
+    constructor Create(AOwner: TComponent); override;
+    procedure Clear;
+  published
+    property IsEmpty: Boolean read FIsEmpty write SetIsEmpty;
+    // Publica as propriedades importantes
+    property Date;
+    property Text;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTDateTimePicker]);
+end;
+
+constructor TDateTimePickerEx.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FIsEmpty := True;
+end;
+
+procedure TDateTimePickerEx.Clear;
+begin
+  FIsEmpty := True;
+  // Limpa o texto do componente para que ele apareça vazio
+  Text := '';
+end;
+
+procedure TDateTimePickerEx.SetIsEmpty(const Value: Boolean);
+begin
+  if FIsEmpty <> Value then
+  begin
+    FIsEmpty := Value;
+    if FIsEmpty then
+    begin
+      // Limpa a data interna e o texto
+      Date := 0; // Uma data nula
+      Text := '';
+    end
+    else
+    begin
+      // Se não está vazio, define a data para a data atual
+      // ou um valor padrão para que o seletor funcione
+      if Date = 0 then
+        Date := Now;
+    end;
+  end;
+end;
+
+procedure Register;
+begin
+  RegisterComponents('Custom', [TDateTimePickerEx]);
+end;
+
+end.

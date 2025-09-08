@@ -1,0 +1,184 @@
+﻿unit CMTEditCalendar;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.StdCtrls, Vcl.ComCtrls,
+  System.Types, Vcl.Forms, Winapi.Windows, Vcl.Buttons;
+
+type
+  TCMTEditCalendar = class(TCustomControl)
+ private
+    FEdit: TEdit;
+    FButton: TSpeedButton;
+    FDateTimePicker: TDateTimePicker;
+    FText: string;
+    FDate: TDateTime;
+    procedure SetText(const Value: string);
+    procedure SetDate(const Value: TDateTime);
+    procedure EditChange(Sender: TObject);
+    procedure EditKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure DateTimePickerChange(Sender: TObject);
+    procedure ButtonClick(Sender: TObject);
+    procedure OnExitHandler(Sender: TObject);
+    procedure UpdateEditFromDate;
+    procedure UpdateDateFromEdit;
+  protected
+    procedure Resize; override;
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+
+  published
+    property Align;
+    property Anchors;
+    property Text: string read FText write SetText;
+    property Date: TDateTime read FDate write SetDate;
+    property TabOrder;
+    property TabStop default True;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTEditCalendar]);
+end;
+
+constructor TCMTEditCalendar.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+
+  Width := 150;
+  Height := 23;
+  TabStop := True;
+
+  FEdit := TEdit.Create(Self);
+  FEdit.Parent := Self;
+  FEdit.TextHint := 'dd/mm/yyyy';
+  FEdit.Align := alClient;
+  FEdit.Anchors := [akLeft, akTop, akRight];
+  FEdit.OnChange := EditChange;
+  FEdit.OnExit := OnExitHandler;
+  FEdit.OnKeyUp := EditKeyUp;
+  FEdit.DoubleBuffered := True;
+
+  FButton := TSpeedButton.Create(Self);
+  FButton.Parent := Self;
+  FButton.Width := 20;
+  FButton.Height := FEdit.Height;
+  FButton.Align := alRight;
+  FButton.OnClick := ButtonClick;
+  FButton.Flat := True;
+  FButton.Anchors := [akTop, akRight];
+  FButton.ParentDoubleBuffered := False;
+  FButton.Layout := blGlyphOnly;
+  FButton.Caption := '';
+
+  FDateTimePicker := TDateTimePicker.Create(Self);
+  FDateTimePicker.Parent := AOwner as TWinControl;
+  FDateTimePicker.Kind := dtkDate;
+  FDateTimePicker.DateMode := dmComboBox;
+  FDateTimePicker.Format := 'dd/MM/yyyy';
+  FDateTimePicker.Visible := False;
+  FDateTimePicker.Anchors := [akLeft, akTop];
+  FDateTimePicker.DoubleBuffered := True;
+  FDateTimePicker.OnChange := DateTimePickerChange;
+end;
+
+destructor TCMTEditCalendar.Destroy;
+begin
+  FDateTimePicker.Free;
+  inherited;
+end;
+
+procedure TCMTEditCalendar.ButtonClick(Sender: TObject);
+begin
+  FDateTimePicker.Top := FEdit.Parent.Top + FEdit.Top + FEdit.Height;
+  FDateTimePicker.Left := FEdit.Parent.Left + FEdit.Left;
+  FDateTimePicker.Width := FEdit.Width;
+  FDateTimePicker.Visible := True;
+  FDateTimePicker.BringToFront;
+end;
+
+procedure TCMTEditCalendar.DateTimePickerChange(Sender: TObject);
+begin
+  FDate := FDateTimePicker.Date;
+  UpdateEditFromDate;
+  FDateTimePicker.Visible := False;
+  FEdit.SetFocus;
+end;
+
+procedure TCMTEditCalendar.EditChange(Sender: TObject);
+begin
+  FText := FEdit.Text;
+end;
+
+procedure TCMTEditCalendar.EditKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if Key = VK_RETURN then
+    UpdateDateFromEdit;
+end;
+
+procedure TCMTEditCalendar.OnExitHandler(Sender: TObject);
+begin
+  UpdateDateFromEdit;
+  if FDateTimePicker.Visible then
+    FDateTimePicker.Visible := False;
+end;
+
+procedure TCMTEditCalendar.UpdateEditFromDate;
+begin
+  if FDate = 0 then
+    FEdit.Text := ''
+  else
+    FEdit.Text := FormatDateTime('dd/mm/yyyy', FDate);
+  FText := FEdit.Text;
+end;
+
+procedure TCMTEditCalendar.UpdateDateFromEdit;
+var
+  LDate: TDateTime;
+begin
+  if TryStrToDateTime(FEdit.Text, LDate) then
+  begin
+    FDate := LDate;
+  end
+  else
+  begin
+    FDate := 0; // Data inválida, a propriedade FDate é redefinida para 0.
+    FEdit.Text := ''; // E o campo é limpo.
+  end;
+end;
+
+procedure TCMTEditCalendar.Resize;
+begin
+  inherited;
+  FButton.Height := Height;
+  FEdit.Height := Height;
+end;
+
+procedure TCMTEditCalendar.SetDate(const Value: TDateTime);
+begin
+  FDate := Value;
+  UpdateEditFromDate;
+end;
+
+procedure TCMTEditCalendar.SetText(const Value: string);
+begin
+  FText := Value;
+  FEdit.Text := Value;
+  UpdateDateFromEdit;
+end;
+
+procedure TCMTEditCalendar.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  inherited;
+  if Key = VK_F4 then
+    ButtonClick(Self);
+end;
+
+end.

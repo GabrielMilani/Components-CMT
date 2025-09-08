@@ -1,0 +1,236 @@
+unit CMTDBGrid;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.Grids, Vcl.DBGrids,
+  Winapi.Windows, Vcl.Forms, Vcl.Graphics, Data.DB, Math;
+
+type
+  TCMTDBGrid = class(TDBGrid)
+  private
+    FAutoSizeColumns: Boolean;
+    FFixedColumnNames: TStrings;
+    FCheckBoxColumn: string;
+    procedure SetAutoSizeColumns(const Value: Boolean);
+    procedure AdjustColumnWidths;
+    procedure SetCheckBoxColumn(const Value: string);
+  protected
+    procedure DrawColumnCell(const Rect: TRect; DataCol: Integer; Column: TColumn; State: TGridDrawState); override;
+    procedure Loaded; override;
+    procedure Resize; override;
+    procedure CellClick(Column: TColumn); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+  published
+    property AutoSizeColumns: Boolean read FAutoSizeColumns write SetAutoSizeColumns default False;
+    property FixedColumnNames: TStrings read FFixedColumnNames write FFixedColumnNames;
+    property CheckBoxColumn: string read FCheckBoxColumn write SetCheckBoxColumn;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTDBGrid]);
+end;
+
+constructor TCMTDBGrid.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FFixedColumnNames := TStringList.Create;
+  BorderStyle := bsNone;
+  DrawingStyle := gdsClassic;
+  Font.Name := 'Segoe UI';
+  Font.Size := 9;
+  Font.Style := [fsBold];
+  TitleFont.Name := 'Segoe UI';
+  TitleFont.Size := 9;
+  TitleFont.Style := [fsBold];
+  TitleFont.Color := clWhite;
+  FixedColor := TColor($00676767);
+  Options := [dgTitles, dgColumnResize, dgColLines, dgTabs, dgRowSelect, dgAlwaysShowSelection, dgConfirmDelete, dgCancelOnExit, dgTitleClick, dgTitleHotTrack];
+  Ctl3D := False;
+  ParentCtl3D := False;
+  GridLineWidth := 1;
+  Color := clWhite;
+  FAutoSizeColumns := False;
+  FCheckBoxColumn := '';
+end;
+
+destructor TCMTDBGrid.Destroy;
+begin
+  FFixedColumnNames.Free;
+  inherited;
+end;
+
+procedure TCMTDBGrid.SetAutoSizeColumns(const Value: Boolean);
+begin
+  if FAutoSizeColumns <> Value then
+  begin
+    FAutoSizeColumns := Value;
+    if FAutoSizeColumns then
+      AdjustColumnWidths;
+  end;
+end;
+
+procedure TCMTDBGrid.SetCheckBoxColumn(const Value: string);
+begin
+  if FCheckBoxColumn <> Value then
+  begin
+    FCheckBoxColumn := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TCMTDBGrid.AdjustColumnWidths;
+var
+  i, TotalWidth, GridUsableWidth, ExtraWidth, FlexCount: Integer;
+  BaseWidths: array of Integer;
+  CellText: string;
+begin
+  if Columns.Count = 0 then Exit;
+
+  GridUsableWidth := ClientWidth - 2;
+  if dgColLines in Options then
+    Dec(GridUsableWidth, GridLineWidth * Columns.Count);
+
+  SetLength(BaseWidths, Columns.Count);
+  TotalWidth := 0;
+  FlexCount := 0;
+
+  for i := 0 to Columns.Count - 1 do
+  begin
+    if FFixedColumnNames.IndexOf(Columns[i].FieldName) <> -1 then
+    begin
+      Dec(GridUsableWidth, Columns[i].Width);
+      Continue;
+    end;
+
+    Canvas.Font.Assign(TitleFont);
+    BaseWidths[i] := Canvas.TextWidth(Columns[i].Title.Caption + '  ');
+
+    Canvas.Font.Assign(Font);
+    if Assigned(Columns[i].Field) then
+      CellText := Columns[i].Field.DisplayText
+    else
+      CellText := '';
+
+    BaseWidths[i] := Max(BaseWidths[i], Canvas.TextWidth(CellText + '  ')) + 8;
+    Inc(TotalWidth, BaseWidths[i]);
+    Inc(FlexCount);
+  end;
+
+  if (TotalWidth <= 0) or (FlexCount = 0) then Exit;
+
+  for i := 0 to Columns.Count - 1 do
+    if FFixedColumnNames.IndexOf(Columns[i].FieldName) = -1 then
+      Columns[i].Width := MulDiv(BaseWidths[i], GridUsableWidth, TotalWidth);
+
+  ExtraWidth := GridUsableWidth;
+  for i := 0 to Columns.Count - 1 do
+    if FFixedColumnNames.IndexOf(Columns[i].FieldName) = -1 then
+      Dec(ExtraWidth, Columns[i].Width);
+
+  i := 0;
+  while ExtraWidth > 0 do
+  begin
+    if FFixedColumnNames.IndexOf(Columns[i].FieldName) = -1 then
+    begin
+      Columns[i].Width := Columns[i].Width + 1;
+      Dec(ExtraWidth);
+    end;
+    Inc(i);
+    if i >= Columns.Count then i := 0;
+  end;
+end;
+
+procedure TCMTDBGrid.Loaded;
+begin
+  inherited;
+  if FAutoSizeColumns then
+    AdjustColumnWidths;
+end;
+
+procedure TCMTDBGrid.Resize;
+begin
+  inherited;
+  if FAutoSizeColumns then
+    AdjustColumnWidths;
+end;
+
+procedure TCMTDBGrid.CellClick(Column: TColumn);
+begin
+  if (FCheckBoxColumn <> '') and
+     (SameText(Column.FieldName, FCheckBoxColumn)) and
+     Assigned(Column.Field) and
+     (Column.Field.DataType in [ftBoolean, ftSmallint, ftInteger]) then
+  begin
+    if Assigned(DataSource) and Assigned(DataSource.DataSet) and DataSource.DataSet.Active then
+    begin
+      DataSource.DataSet.Edit;
+      Column.Field.AsBoolean := not Column.Field.AsBoolean;
+      DataSource.DataSet.Post;
+      Invalidate;
+    end;
+  end
+  else
+    inherited;
+end;
+
+procedure TCMTDBGrid.DrawColumnCell(const Rect: TRect; DataCol: Integer; Column: TColumn; State: TGridDrawState);
+var
+  RecNo: Integer;
+  CheckRect: TRect;
+  Flags: UINT;
+  Checked: Boolean;
+begin
+  if Assigned(DataSource) and Assigned(DataSource.DataSet) then
+    RecNo := DataSource.DataSet.RecNo
+  else
+    RecNo := 0;
+
+  if Odd(RecNo) then
+    Canvas.Brush.Color := $00E9E9E9
+  else
+    Canvas.Brush.Color := clWhite;
+
+  if gdSelected in State then
+  begin
+    Canvas.Brush.Color := clSkyBlue;
+    Canvas.Font.Color := clWhite;
+    Canvas.Font.Style := [fsBold];
+  end
+  else
+  begin
+    Canvas.Font.Color := Font.Color;
+    Canvas.Font.Style := Font.Style;
+  end;
+
+  Canvas.FillRect(Rect);
+
+  if (FCheckBoxColumn <> '') and SameText(Column.FieldName, FCheckBoxColumn) and Assigned(Column.Field) then
+  begin
+    CheckRect := Rect;
+    CheckRect.Left := Rect.Left + (Rect.Width div 2) - 8;
+    CheckRect.Top := Rect.Top + (Rect.Height div 2) - 8;
+    CheckRect.Right := CheckRect.Left + 16;
+    CheckRect.Bottom := CheckRect.Top + 16;
+
+    Checked := Column.Field.AsBoolean;
+    Flags := DFCS_BUTTONCHECK;
+    if Checked then
+      Flags := Flags or DFCS_CHECKED;
+
+    DrawFrameControl(Canvas.Handle, CheckRect, DFC_BUTTON, Flags);
+  end
+  else
+  begin
+    DefaultDrawColumnCell(Rect, DataCol, Column, State);
+  end;
+end;
+
+end

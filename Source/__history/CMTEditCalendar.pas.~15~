@@ -1,0 +1,107 @@
+﻿unit CMTEditCalendar;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.StdCtrls, Vcl.ComCtrls,
+  System.Types, Vcl.Forms, Winapi.Windows, Vcl.Buttons;
+
+type
+  TCMTEditCalendar = class(TDateTimePicker)
+  private
+    FEmpty: Boolean;
+    FDisplayFormat: string;
+    procedure SetEmpty(Value: Boolean);
+    procedure SetDisplayFormat(const Value: string);
+  protected
+    procedure CNNotify(var Message: TWMNotify); message CN_NOTIFY;
+    procedure Change; override;
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure KeyPress(var Key: Char); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    procedure Clear;
+    function GetDate: TDateTime;
+    property Empty: Boolean read FEmpty write SetEmpty;
+  published
+    property DisplayFormat: string read FDisplayFormat write SetDisplayFormat;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTEditCalendar]);
+end;
+
+constructor TCMTDateTimePicker.Create(AOwner: TComponent);
+begin
+  inherited;
+  FDisplayFormat := 'dd/MM/yyyy';
+  SetEmpty(True); // começa vazio
+end;
+
+procedure TCMTDateTimePicker.Clear;
+begin
+  SetEmpty(True);
+  Text := '';
+end;
+
+procedure TCMTDateTimePicker.SetDisplayFormat(const Value: string);
+begin
+  FDisplayFormat := Value;
+  if not FEmpty then
+    Format := FDisplayFormat;
+end;
+
+procedure TCMTDateTimePicker.SetEmpty(Value: Boolean);
+begin
+  FEmpty := Value;
+  if FEmpty then
+  begin
+    Format := ' ';
+    Text := '';
+  end
+  else
+    Format := FDisplayFormat;
+end;
+
+procedure TCMTDateTimePicker.CNNotify(var Message: TWMNotify);
+begin
+  inherited;
+  if (Message.NMHdr^.code = DTN_DROPDOWN) and FEmpty then
+    SetEmpty(False);
+end;
+
+procedure TCMTDateTimePicker.Change;
+begin
+  inherited;
+  if FEmpty and (Text <> '') then
+    SetEmpty(False);
+end;
+
+procedure TCMTDateTimePicker.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  inherited;
+  if (Key = VK_BACK) or (Key = VK_DELETE) then
+    Clear;
+end;
+
+procedure TCMTDateTimePicker.KeyPress(var Key: Char);
+begin
+  inherited;
+  if FEmpty and (Key in ['0'..'9']) then
+    SetEmpty(False);
+end;
+
+function TCMTDateTimePicker.GetDate: TDateTime;
+begin
+  if FEmpty then
+    Result := 0
+  else
+    Result := Self.Date;
+end;
+
+end.

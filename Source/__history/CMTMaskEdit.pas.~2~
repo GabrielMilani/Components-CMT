@@ -1,0 +1,33 @@
+unit CMTMaskEdit;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.StdCtrls, Vcl.Mask;
+
+type
+  // Tipos de máscara que estarão disponíveis para seleção
+  TMaskType = (mtNone, mtCPF, mtCNPJ, mtRG, mtCEP, mtTelefone, mtCelular);
+
+
+  TCMTMaskEdit = class(TMaskEdit)
+  private
+    FMaskType: TMaskType;
+    procedure SetMaskType(const Value: TMaskType);
+  public
+    constructor Create(AOwner: TComponent); override;
+  published
+    // A nova propriedade que irá aparecer no Object Inspector
+    property MaskType: TMaskType read FMaskType write SetMaskType;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTMaskEdit]);
+end;
+
+end.

@@ -1,0 +1,83 @@
+unit CMTCalendarPicker;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.WinXCalendars;
+
+type
+  TCMTCalendarPicker = class(TCalendarPicker)
+  private
+    FIsEmpty: Boolean;
+    procedure SetIsEmpty(const Value: Boolean);
+  protected
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure Loaded; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    procedure Clear;
+  published
+    property IsEmpty: Boolean read FIsEmpty write SetIsEmpty;
+    property Value;
+    property Text;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTCalendarPicker]);
+end;
+
+constructor TCMTCalendarPicker.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FIsEmpty := True;
+end;
+
+procedure TCMTCalendarPicker.Clear;
+begin
+  IsEmpty := True;
+end;
+
+procedure TCMTCalendarPicker.SetIsEmpty(const Value: Boolean);
+begin
+  if FIsEmpty <> Value then
+  begin
+    FIsEmpty := Value;
+    if FIsEmpty then
+    begin
+      Value := NullDate;
+      Text := '';
+    end
+    else
+    begin
+      if Value = NullDate then
+        Value := Now;
+    end;
+  end;
+end;
+
+procedure TCMTCalendarPicker.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  if Key = VK_BACK then
+  begin
+    Clear;
+    Key := 0;
+  end
+  else
+    inherited KeyDown(Key, Shift);
+end;
+
+procedure TCMTCalendarPicker.Loaded;
+begin
+  inherited Loaded;
+  if (Value = NullDate) and (Text = '') then
+    FIsEmpty := True;
+end;
+
+end.
+
+end.

@@ -1,0 +1,68 @@
+unit CMTRadioButton;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, StdCtrls;
+
+type
+  TCMTRadioButton = class(TRadioButton)
+  private
+    FTextColor: TColor;
+    procedure SetTextColor(const Value: TColor);
+  protected
+    procedure Paint; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+  published
+    property TextColor: TColor read FTextColor write SetTextColor;
+  end;
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTRadioButton]);
+end;
+
+
+constructor TRadioButtonColor.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FTextColor := clWindowText; // Cor padrão do texto
+end;
+
+procedure TRadioButtonColor.Paint;
+var
+  LCanvas: TCanvas;
+  R: TRect;
+begin
+  // Primeiro, desenha o RadioButton padrão para garantir que o círculo apareça
+  inherited Paint;
+
+  // Usa o canvas do próprio componente para desenhar o texto com a cor customizada
+  LCanvas := Canvas;
+  LCanvas.Font.Color := FTextColor;
+
+  R := GetClientRect;
+  R.Left := R.Left + CheckboxSize + CheckboxMargin; // Desloca a posição do texto
+
+  LCanvas.TextRect(R, R.Left, R.Top, Caption, [tfSingleLine, tfLeft, tfVCenter]);
+end;
+
+procedure TRadioButtonColor.SetTextColor(const Value: TColor);
+begin
+  if FTextColor <> Value then
+  begin
+    FTextColor := Value;
+    Invalidate; // Força o componente a ser redesenhado
+  end;
+end;
+
+procedure Register;
+begin
+  RegisterComponents('MinhaPaleta', [TRadioButtonColor]);
+end;
+
+end.

@@ -1,0 +1,125 @@
+unit CMTRadioButton;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, StdCtrls;
+
+type
+  TCMTRadioButton = class(TRadioButton)
+  private
+    FCaptionColor: TColor;
+    procedure SetCaptionColor(const Value: TColor);
+    procedure CNDrawItem(var Message: TWMDrawItem); message CN_DRAWITEM;
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+  published
+    property CaptionColor: TColor read FCaptionColor write SetCaptionColor default clWindowText;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTRadioButton]);
+end;
+
+
+constructor TCMTRadioButton.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FCaptionColor := clWindowText;
+end;
+
+procedure TCMTRadioButton.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  // Define o estilo como owner draw para permitir pintura personalizada
+  Params.Style := Params.Style or BS_OWNERDRAW;
+end;
+
+procedure TCMTRadioButton.CNDrawItem(var Message: TWMDrawItem);
+var
+  DrawItemStruct: PDrawItemStruct;
+  R, TextRect: TRect;
+  RadioSize: Integer;
+  RadioRect: TRect;
+  DrawFlags: UINT;
+  OldBkMode: Integer;
+  OldTextColor: COLORREF;
+begin
+  DrawItemStruct := Message.DrawItemStruct;
+
+  with DrawItemStruct^ do
+  begin
+    // Define a área total
+    R := rcItem;
+    RadioSize := 13;
+
+    // Calcula a posição do radio button
+    RadioRect := Rect(R.Left, R.Top + (R.Bottom - R.Top - RadioSize) div 2,
+                      R.Left + RadioSize, R.Top + (R.Bottom - R.Top - RadioSize) div 2 + RadioSize);
+
+    // Limpa o fundo
+    FillRect(hDC, R, CreateSolidBrush(ColorToRGB(Color)));
+
+    // Desenha o círculo do radio button
+    DrawFlags := DFCS_BUTTONRADIO;
+    if Checked then
+      DrawFlags := DrawFlags or DFCS_CHECKED;
+    if not Enabled then
+      DrawFlags := DrawFlags or DFCS_INACTIVE;
+
+    DrawFrameControl(hDC, RadioRect, DFC_BUTTON, DrawFlags);
+
+    // Prepara para desenhar o texto
+    TextRect := R;
+    TextRect.Left := RadioRect.Right + 6; // Espaço entre o radio e o texto
+
+    // Configura as propriedades do texto
+    SelectObject(hDC, Font.Handle);
+    OldBkMode := SetBkMode(hDC, TRANSPARENT);
+
+    // Define a cor do texto
+    if Enabled then
+      OldTextColor := SetTextColor(hDC, ColorToRGB(FCaptionColor))
+    else
+      OldTextColor := SetTextColor(hDC, ColorToRGB(clGrayText));
+
+    // Desenha o texto
+    DrawFlags := DT_LEFT or DT_VCENTER or DT_SINGLELINE;
+    if not FShowAccelChar then
+      DrawFlags := DrawFlags or DT_NOPREFIX;
+    if not ShowAccelChar then
+      DrawFlags := DrawFlags or DT_NOPREFIX;
+
+    DrawText(hDC, PChar(Caption), Length(Caption), TextRect, DrawFlags);
+
+    // Desenha o retângulo de foco se necessário
+    if (itemState and ODS_FOCUS) <> 0 then
+    begin
+      DrawFocusRect(hDC, TextRect);
+    end;
+
+    // Restaura as configurações originais
+    SetTextColor(hDC, OldTextColor);
+    SetBkMode(hDC, OldBkMode);
+  end;
+
+  Message.Result := 1;
+end;
+
+procedure TCMTRadioButton.SetCaptionColor(const Value: TColor);
+begin
+  if FCaptionColor <> Value then
+  begin
+    FCaptionColor := Value;
+    Invalidate;
+  end;
+end;
+
+end.

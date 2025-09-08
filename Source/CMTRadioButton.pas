@@ -1,0 +1,65 @@
+unit CMTRadioButton;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.StdCtrls, Vcl.Graphics, Winapi.Windows,
+  Winapi.Messages;
+
+type
+  TCMTRadioButton = class(TRadioButton)
+  private
+    FCaptionColor: TColor;
+    procedure SetCaptionColor(const Value: TColor);
+  protected
+    procedure WMPaint(var Msg: TWMPaint); message WM_PAINT;
+  published
+    property CaptionColor: TColor read FCaptionColor write SetCaptionColor default clWindowText;
+  end;
+
+procedure Register;
+
+implementation
+
+{ TCMTRadioButton }
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTRadioButton]);
+end;
+
+procedure TCMTRadioButton.SetCaptionColor(const Value: TColor);
+begin
+  if FCaptionColor <> Value then
+  begin
+    FCaptionColor := Value;
+    Invalidate; // força redesenho
+  end;
+end;
+
+procedure TCMTRadioButton.WMPaint(var Msg: TWMPaint);
+var
+  R: TRect;
+  DC: HDC;
+  OldFont: HFONT;
+begin
+  inherited; // deixa o Windows desenhar o RadioButton normal
+
+  DC := GetDC(Handle);
+  try
+    R := ClientRect;
+    R.Left := R.Left + GetSystemMetrics(SM_CXMENUCHECK) + 4; // desloca para não sobrescrever a bolinha
+
+    OldFont := SelectObject(DC, Font.Handle);
+    SetTextColor(DC, ColorToRGB(FCaptionColor));
+    SetBkMode(DC, TRANSPARENT);
+
+    DrawText(DC, PChar(Caption), -1, R, DT_LEFT or DT_VCENTER or DT_SINGLELINE);
+
+    SelectObject(DC, OldFont);
+  finally
+    ReleaseDC(Handle, DC);
+  end;
+end;
+
+end.

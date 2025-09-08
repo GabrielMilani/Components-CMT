@@ -1,0 +1,209 @@
+unit CMTCalendarEdit;
+
+interface
+
+uses
+  System.Classes, System.SysUtils, Vcl.Controls, Vcl.StdCtrls, Vcl.ComCtrls,
+  Vcl.Graphics, Vcl.Dialogs, CMTCustomButton, Windows, Messages,
+  Vcl.Mask, Vcl.Forms;
+
+type
+  TCMTCalendarEdit = class(TWinControl)
+  private
+    FEdit: TMaskEdit;
+    FButton: TCMTCustomButton;
+    FCalendar: TMonthCalendar;
+
+    procedure ButtonClick(Sender: TObject);
+    procedure CalendarDateSelected(Sender: TObject);
+    procedure ResizeControls;
+    procedure LoadCalendarImage;
+    procedure AjustarVerticalDoEdit(Edit: TMaskEdit);
+
+    function GetText: string;
+    procedure SetText(const Value: string);
+    function GetDate: TDateTime;
+    procedure SetDate(const Value: TDateTime);
+
+    // Exposição de propriedades do botão
+    function GetButtonBaseColor: TColor;
+    procedure SetButtonBaseColor(const Value: TColor);
+    function GetButtonHoverColor: TColor;
+    procedure SetButtonHoverColor(const Value: TColor);
+    function GetButtonCornerRadius: Integer;
+    procedure SetButtonCornerRadius(const Value: Integer);
+  protected
+    procedure Resize; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+
+    property Date: TDateTime read GetDate write SetDate;
+    property Text: string read GetText write SetText;
+  published
+    property Align;
+    property Anchors;
+    property Enabled;
+    property Visible;
+
+    // Propriedades visuais do botão expostas no Object Inspector
+    property ButtonBaseColor: TColor read GetButtonBaseColor write SetButtonBaseColor;
+    property ButtonHoverColor: TColor read GetButtonHoverColor write SetButtonHoverColor;
+    property ButtonCornerRadius: Integer read GetButtonCornerRadius write SetButtonCornerRadius;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTCalendarEdit]);
+end;
+
+constructor TCMTCalendarEdit.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  Width := 200;
+  Height := 24;
+
+  FEdit := TMaskEdit.Create(Self);
+  FEdit.Parent := Self;
+  FEdit.EditMask := '99/99/9999;1;_';
+  FEdit.Text := '';
+  FEdit.BorderStyle := bsNone;
+  FEdit.SetBounds(0, 0, Width - 30, Height);
+  AjustarVerticalDoEdit(FEdit);
+
+  FButton := TCMTCustomButton.Create(Self);
+  FButton.Parent := Self;
+  FButton.Caption := '';
+  FButton.SetBounds(Width - 30, 0, 30, Height);
+  FButton.OnClick := ButtonClick;
+  LoadCalendarImage;
+
+  if not (csDesigning in ComponentState) then
+  begin
+    FCalendar := TMonthCalendar.Create(nil);
+    FCalendar.Visible := False;
+    FCalendar.OnClick := CalendarDateSelected;
+  end;
+end;
+
+destructor TCMTCalendarEdit.Destroy;
+begin
+  FCalendar.Free;
+  inherited;
+end;
+
+procedure TCMTCalendarEdit.AjustarVerticalDoEdit(Edit: TMaskEdit);
+var
+  R: TRect;
+begin
+  R := Rect(2, 4, Edit.Width - 2, Edit.Height - 2);
+  SendMessage(Edit.Handle, EM_SETRECT, 0, LPARAM(@R));
+end;
+
+procedure TCMTCalendarEdit.LoadCalendarImage;
+var
+  ImagePath: string;
+begin
+  ImagePath := ExtractFilePath(ParamStr(0)) + 'image\calendar.png';
+  if FileExists(ImagePath) then
+    FButton.Image.LoadFromFile(ImagePath)
+  else
+    ShowMessage('Imagem não encontrada: ' + ImagePath);
+end;
+
+procedure TCMTCalendarEdit.ButtonClick(Sender: TObject);
+var
+  P: TPoint;
+  Form: TCustomForm;
+begin
+  Form := GetParentForm(Self);
+  if (Form = nil) or (csDesigning in ComponentState) then
+    Exit; // Evita erro em tempo de design
+
+  P := FEdit.ClientToScreen(Point(0, FEdit.Height));
+  FCalendar.Parent := Form;
+  FCalendar.Left := P.X;
+  FCalendar.Top := P.Y;
+  FCalendar.Visible := True;
+  FCalendar.BringToFront;
+end;
+
+procedure TCMTCalendarEdit.CalendarDateSelected(Sender: TObject);
+begin
+  FEdit.Text := FormatDateTime('dd/mm/yyyy', FCalendar.Date);
+  FCalendar.Visible := False;
+end;
+
+procedure TCMTCalendarEdit.Resize;
+begin
+  inherited;
+  ResizeControls;
+end;
+
+procedure TCMTCalendarEdit.ResizeControls;
+begin
+  FEdit.Width := Width - FButton.Width;
+  FButton.Left := Width - FButton.Width;
+  FEdit.Height := Height;
+  FButton.Height := Height;
+end;
+
+function TCMTCalendarEdit.GetText: string;
+begin
+  Result := FEdit.Text;
+end;
+
+procedure TCMTCalendarEdit.SetText(const Value: string);
+begin
+  FEdit.Text := Value;
+end;
+
+function TCMTCalendarEdit.GetDate: TDateTime;
+begin
+  try
+    Result := StrToDate(FEdit.Text);
+  except
+    Result := 0;
+  end;
+end;
+
+procedure TCMTCalendarEdit.SetDate(const Value: TDateTime);
+begin
+  FEdit.Text := FormatDateTime('dd/mm/yyyy', Value);
+end;
+
+function TCMTCalendarEdit.GetButtonBaseColor: TColor;
+begin
+  Result := FButton.BaseColor;
+end;
+
+procedure TCMTCalendarEdit.SetButtonBaseColor(const Value: TColor);
+begin
+  FButton.BaseColor := Value;
+end;
+
+function TCMTCalendarEdit.GetButtonHoverColor: TColor;
+begin
+  Result := FButton.HoverColor;
+end;
+
+procedure TCMTCalendarEdit.SetButtonHoverColor(const Value: TColor);
+begin
+  FButton.HoverColor := Value;
+end;
+
+function TCMTCalendarEdit.GetButtonCornerRadius: Integer;
+begin
+  Result := FButton.CornerRadius;
+end;
+
+procedure TCMTCalendarEdit.SetButtonCornerRadius(const Value: Integer);
+begin
+  FButton.CornerRadius := Value;
+end;
+
+end.

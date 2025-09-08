@@ -1,0 +1,59 @@
+unit CMTDatePicker;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Vcl.Controls, Vcl.ComCtrls, Winapi.Messages;
+
+type
+  TCMTDatePicker = class(TDateTimePicker)
+  private
+    FAllowEmpty: Boolean;
+    procedure CNNotify(var Message: TWMNotify); message CN_NOTIFY;
+  protected
+    procedure KeyPress(var Key: Char); override;
+    procedure DropDown; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+  published
+    property AllowEmpty: Boolean read FAllowEmpty write FAllowEmpty default True;
+  end;
+
+procedure Register;
+
+implementation
+
+procedure Register;
+begin
+  RegisterComponents('CMT', [TCMTDatePicker]);
+end;
+
+constructor TCMTDatePicker.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FAllowEmpty := True;
+  // Permite digitação
+  Self.Kind := dtkDate;
+  Self.ShowCheckbox := False;
+end;
+
+procedure TCMTDatePicker.KeyPress(var Key: Char);
+begin
+  inherited;
+  if FAllowEmpty and (Key = #8) then // Backspace
+    Self.Text := ''; // Limpa o campo
+end;
+
+procedure TCMTDatePicker.DropDown;
+begin
+  inherited;
+  // Aqui você pode personalizar se quiser
+end;
+
+procedure TCMTDatePicker.CNNotify(var Message: TWMNotify);
+begin
+  inherited;
+  // Aqui você pode interceptar eventos do calendário se precisar
+end;
+
+end.
