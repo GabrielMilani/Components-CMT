@@ -1,19 +1,50 @@
-# Pastas de compilação/artefatos
-/dcu/
-/bin/
-
-# Outras pastas de histórico do Delphi
-/__history/
-/__recovery/
-
-# Arquivos temporários e backups
+# Delphi compilados
 *.dcu
+*.dcp
+*.dcpil
+*.dpu
+*.bpl
+*.bpi
+*.lib
+*.dll
+*.exe
+*.ocx
+*.tds
+
+# Arquivos de build temporários
+*.bak
 *.~*
+*.dsk
 *.local
 *.identcache
+*.stat
 *.tvsconfig
+*.ipch
+*.pch
+*.obj
+*.res
+*.map
 
-# Configurações locais do Delphi
+# Configurações de usuário (não versionar)
 *.dproj.local
 *.groupproj.local
+*.dsk
+
+# Pastas de saída
+__history/
+__recovery/
+Win32/Debug/
+Win32/Release/
+Win64/Debug/
+Win64/Release/
+
+# Arquivos do MSBuild
+*.deployproj
 *.deployproj.local
+
+# Arquivos de log
+*.log
+
+# Arquivos gerados por instalação de pacotes
+*.drc
+*.hpp
