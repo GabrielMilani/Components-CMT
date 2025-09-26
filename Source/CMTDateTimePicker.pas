@@ -3,6 +3,7 @@
 interface
 
 uses
+  Winapi.Windows, Winapi.Messages,
   System.SysUtils, System.Classes, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls,
   Vcl.Forms, Vcl.Graphics, Vcl.ComCtrls, Vcl.Mask, System.Types,
   CMTCustomButton;
@@ -111,13 +112,15 @@ begin
   FButton.SetSubComponent(True);
   FButtonColor := FButton.BaseColor;
 
-  // Formulário pop-up com calendário
-  FPopupForm := TForm.Create(nil);
+  // Formulário pop-up com calendário (como drop-down)
+  FPopupForm := TForm.CreateNew(nil);
   FPopupForm.BorderStyle := bsNone;
+  FPopupForm.FormStyle := fsStayOnTop;
   FPopupForm.Position := poDesigned;
   FPopupForm.ClientWidth := 220;
   FPopupForm.ClientHeight := 190;
-  FPopupForm.OnDeactivate := CalendarClosed;
+  FPopupForm.PopupMode := pmExplicit;
+  FPopupForm.PopupParent := GetParentForm(Self);
 
   FPopupCalendar := TMonthCalendar.Create(FPopupForm);
   FPopupCalendar.Parent := FPopupForm;
@@ -159,7 +162,9 @@ begin
   FPopupForm.Left := P.X;
   FPopupForm.Top := P.Y;
   FPopupCalendar.Date := Now;
+
   FPopupForm.Show;
+  SetForegroundWindow(FPopupForm.Handle); // garante que fica na frente
   FPopupCalendar.SetFocus;
 end;
 
@@ -171,7 +176,7 @@ end;
 
 procedure TCMTDateEdit.CalendarClosed(Sender: TObject);
 begin
-  if Assigned(FPopupForm) then
+  if FPopupForm.Visible then
     FPopupForm.Hide;
 end;
 

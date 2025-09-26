@@ -22,6 +22,7 @@ type
     FImageSpacing: Integer;
     FTextAlignment: TAlignment;
     FCenterImageOnly: Boolean;
+    FActive: Boolean;
 
     procedure SetBaseColor(Value: TColor);
     procedure SetHoverColor(Value: TColor);
@@ -33,6 +34,7 @@ type
     procedure SetImageSpacing(Value: Integer);
     procedure SetTextAlignment(const Value: TAlignment);
     procedure SetCenterImageOnly(const Value: Boolean);
+    procedure SetActive(const Value: Boolean);
 
     procedure CMMouseEnter(var Message: TMessage); message CM_MOUSEENTER;
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
@@ -64,12 +66,13 @@ type
     property FontColor: TColor read FFontColor write SetFontColor default clWhite;
     property HoverFontColor: TColor read FHoverFontColor write SetHoverFontColor default clWhite;
     property CornerRadius: Integer read FCornerRadius write SetCornerRadius default 10;
-
     property Image: TPicture read FImage write SetImage;
     property ImagePosition: TImagePosition read FImagePosition write SetImagePosition default ipLeft;
     property ImageSpacing: Integer read FImageSpacing write SetImageSpacing default 4;
     property TextAlignment: TAlignment read FTextAlignment write SetTextAlignment default taCenter;
     property CenterImageOnly: Boolean read FCenterImageOnly write SetCenterImageOnly default False;
+
+    property Active: Boolean read FActive write SetActive;
   end;
 
 procedure Register;
@@ -87,6 +90,7 @@ begin
   ControlStyle := ControlStyle + [csOpaque, csCaptureMouse, csClickEvents, csDoubleClicks];
   DoubleBuffered := True;
   FTextAlignment := taCenter;
+  FActive := False; // Inicializa a nova propriedade como False
 
   Width := 120;
   Height := 40;
@@ -200,17 +204,34 @@ begin
   end;
 end;
 
+procedure TCMTCustomButton.SetActive(const Value: Boolean);
+begin
+  if FActive <> Value then
+  begin
+    FActive := Value;
+    // Define FHovering de acordo com a nova propriedade 'Active'
+    FHovering := Value;
+    Invalidate;
+  end;
+end;
+
 procedure TCMTCustomButton.CMMouseEnter(var Message: TMessage);
 begin
   inherited;
-  FHovering := True;
-  Invalidate;
+  // Apenas muda o estado se o botão não estiver ativo permanentemente
+  if not FActive then
+  begin
+    FHovering := True;
+    Invalidate;
+  end;
 end;
 
 procedure TCMTCustomButton.CMMouseLeave(var Message: TMessage);
 begin
   inherited;
-  FHovering := Focused; // mantém hover se ainda estiver com foco
+  // Apenas muda o estado se o botão não estiver ativo permanentemente
+  if not FActive then
+    FHovering := Focused; // mantém o hover se ainda estiver com foco
   Invalidate;
 end;
 
@@ -224,7 +245,9 @@ end;
 procedure TCMTCustomButton.CMExit(var Message: TCMExit);
 begin
   inherited;
-  FHovering := False;
+  // Apenas muda o estado se o botão não estiver ativo permanentemente
+  if not FActive then
+    FHovering := False;
   Invalidate;
 end;
 
@@ -239,7 +262,8 @@ begin
 
   R := ClientRect;
 
-  if FHovering then
+  // Usa a cor de hover se estiver ativo ou se o mouse estiver sobre ele
+  if FActive or FHovering then
   begin
     BgColor := FHoverColor;
     TxtColor := FHoverFontColor;
@@ -338,8 +362,8 @@ begin
   else
     Flags := Flags or DT_VCENTER;
     case FTextAlignment of
-      taLeftJustify:  Flags := Flags or DT_LEFT;
-      taCenter:       Flags := Flags or DT_CENTER;
+      taLeftJustify: Flags := Flags or DT_LEFT;
+      taCenter:      Flags := Flags or DT_CENTER;
       taRightJustify: Flags := Flags or DT_RIGHT;
     end;
   end;
