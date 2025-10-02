@@ -121,6 +121,7 @@ begin
   FPopupForm.ClientHeight := 190;
   FPopupForm.PopupMode := pmExplicit;
   FPopupForm.PopupParent := GetParentForm(Self);
+  FPopupForm.OnDeactivate := CalendarClosed;
 
   FPopupCalendar := TMonthCalendar.Create(FPopupForm);
   FPopupCalendar.Parent := FPopupForm;
