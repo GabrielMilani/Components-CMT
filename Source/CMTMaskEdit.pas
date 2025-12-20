@@ -11,12 +11,31 @@ type
   TCMTMaskEdit = class(TMaskEdit)
   private
     FMaskType: TMaskType;
+
+    function OnlyNumbers(const AValue: string): string;
+    function FormatCPF(const AValue: string): string;
+    function FormatCNPJ(const AValue: string): string;
+    function FormatRG(const AValue: string): string;
+    function FormatCEP(const AValue: string): string;
+    function FormatTelefone(const AValue: string): string;
+    function FormatCelular(const AValue: string): string;
+
+    function GetUnmaskedText: string;
+    function GetText: string;
+
     procedure SetMaskType(const Value: TMaskType);
+    procedure SetText(const Value: string);
+
     procedure CMExit(var Message: TMessage); message CM_EXIT;
     function ValidateIP(const AValue: string): Boolean;
+
   public
     constructor Create(AOwner: TComponent); override;
+
+    property UnmaskedText: string read GetUnmaskedText;
+
   published
+    property Text: string read GetText write SetText;
     property MaskType: TMaskType read FMaskType write SetMaskType;
   end;
 
@@ -31,78 +50,152 @@ end;
 
 constructor TCMTMaskEdit.Create(AOwner: TComponent);
 begin
-  inherited Create(AOwner);
+  inherited;
   FMaskType := mtNone;
-  TextHint := '';
 end;
 
+{ UTIL }
+function TCMTMaskEdit.OnlyNumbers(const AValue: string): string;
+var c: Char;
+begin
+  Result := '';
+  for c in AValue do
+    if c in ['0'..'9'] then
+      Result := Result + c;
+end;
+
+function TCMTMaskEdit.GetText: string;
+begin
+  Result := inherited Text; // <<< AQUI ESTÁ A CORREÇÃO QUE FALTAVA
+end;
+
+function TCMTMaskEdit.GetUnmaskedText: string;
+begin
+  Result := OnlyNumbers(inherited Text);
+end;
+
+{ FORMATADORES }
+function TCMTMaskEdit.FormatCPF(const AValue: string): string;
+var s: string;
+begin
+  s := OnlyNumbers(AValue);
+  if Length(s) = 11 then
+    Result := Copy(s,1,3)+'.'+Copy(s,4,3)+'.'+Copy(s,7,3)+'-'+Copy(s,10,2)
+  else
+    Result := AValue;
+end;
+
+function TCMTMaskEdit.FormatCNPJ(const AValue: string): string;
+var s: string;
+begin
+  s := OnlyNumbers(AValue);
+  if Length(s) = 14 then
+    Result := Copy(s,1,2)+'.'+Copy(s,3,3)+'.'+Copy(s,6,3)+'/'+Copy(s,9,4)+'-'+Copy(s,13,2)
+  else
+    Result := AValue;
+end;
+
+function TCMTMaskEdit.FormatRG(const AValue: string): string;
+var s: string;
+begin
+  s := OnlyNumbers(AValue);
+  if Length(s) = 9 then
+    Result := Copy(s,1,2)+'.'+Copy(s,3,3)+'.'+Copy(s,6,3)+'-'+Copy(s,9,1)
+  else
+    Result := AValue;
+end;
+
+function TCMTMaskEdit.FormatCEP(const AValue: string): string;
+var s: string;
+begin
+  s := OnlyNumbers(AValue);
+  if Length(s) = 8 then
+    Result := Copy(s,1,5)+'-'+Copy(s,6,3)
+  else
+    Result := AValue;
+end;
+
+function TCMTMaskEdit.FormatTelefone(const AValue: string): string;
+var s: string;
+begin
+  s := OnlyNumbers(AValue);
+  if Length(s) = 10 then
+    Result := '('+Copy(s,1,2)+')'+Copy(s,3,4)+'-'+Copy(s,7,4)
+  else
+    Result := AValue;
+end;
+
+function TCMTMaskEdit.FormatCelular(const AValue: string): string;
+var s: string;
+begin
+  s := OnlyNumbers(AValue);
+  if Length(s) = 11 then
+    Result := '('+Copy(s,1,2)+')'+Copy(s,3,5)+'-'+Copy(s,8,4)
+  else
+    Result := AValue;
+end;
+
+{ MÁSCARA }
 procedure TCMTMaskEdit.SetMaskType(const Value: TMaskType);
 begin
-  if FMaskType <> Value then
-  begin
-    FMaskType := Value;
-    case FMaskType of
-      mtNone:
-        begin
-          EditMask := '';
-          TextHint := '';
-        end;
-      mtCPF:
-        begin
-          EditMask := '!999.999.999-99;1;_';
-          TextHint := '___.___.___-__';
-        end;
-      mtCNPJ:
-        begin
-          EditMask := '!99.999.999/9999-99;1;_';
-          TextHint := '__.___.___/____-__';
-        end;
-      mtRG:
-        begin
-          EditMask := '!99.999.999-9;1;_';
-          TextHint := '__.___.___-__';
-        end;
-      mtCEP:
-        begin
-          EditMask := '!99999-999;1;_';
-          TextHint := '_____-___';
-        end;
-      mtTelefone:
-        begin
-          EditMask := '!(99)9999-9999;1;_';
-          TextHint := '(DD)____-____';
-        end;
-      mtCelular:
-        begin
-          EditMask := '!(99)99999-9999;1;_';
-          TextHint := '(DD)_____-____';
-        end;
-      mtServerIp:
-        begin
-          EditMask := ''; // deixa livre, sem máscara rígida
-          TextHint := 'Ex: 192.168.0.1';
-        end;
-    end;
+  FMaskType := Value;
+
+  case Value of
+    mtNone:
+      EditMask := '';
+
+    mtCPF:
+      EditMask := '!999.999.999-99;1;_';
+
+    mtCNPJ:
+      EditMask := '!99.999.999/9999-99;1;_';
+
+    mtRG:
+      EditMask := '!99.999.999-9;1;_';
+
+    mtCEP:
+      EditMask := '!99999-999;1;_';
+
+    mtTelefone:
+      EditMask := '!(99)9999-9999;1;_';
+
+    mtCelular:
+      EditMask := '!(99)99999-9999;1;_';
+
+    mtServerIp:
+      EditMask := '';
   end;
 end;
 
-function TCMTMaskEdit.ValidateIP(const AValue: string): Boolean;
-var
-  Parts: TArray<string>;
-  Num, I: Integer;
+{ SETTEXT }
+procedure TCMTMaskEdit.SetText(const Value: string);
+var raw: string;
 begin
-  Result := False;
-  Parts := AValue.Split(['.']);
-  if Length(Parts) <> 4 then
-    Exit;
+  raw := OnlyNumbers(Value);
 
-  for I := 0 to 3 do
-  begin
-    if not TryStrToInt(Parts[I], Num) then
-      Exit;
-    if (Num < 0) or (Num > 255) then
-      Exit;
+  case FMaskType of
+    mtCPF:      inherited Text := FormatCPF(raw);
+    mtCNPJ:     inherited Text := FormatCNPJ(raw);
+    mtRG:       inherited Text := FormatRG(raw);
+    mtCEP:      inherited Text := FormatCEP(raw);
+    mtTelefone: inherited Text := FormatTelefone(raw);
+    mtCelular:  inherited Text := FormatCelular(raw);
+    mtServerIp: inherited Text := Value;
+  else
+    inherited Text := Value;
   end;
+end;
+
+{ IP }
+function TCMTMaskEdit.ValidateIP(const AValue: string): Boolean;
+var p: TArray<string>; n,i: Integer;
+begin
+  p := AValue.Split(['.']);
+  if Length(p) <> 4 then exit(False);
+
+  for i := 0 to 3 do
+    if (not TryStrToInt(p[i],n)) or (n < 0) or (n > 255) then
+      exit(False);
 
   Result := True;
 end;
@@ -110,19 +203,9 @@ end;
 procedure TCMTMaskEdit.CMExit(var Message: TMessage);
 begin
   inherited;
-  if FMaskType = mtServerIp then
-  begin
-    if (Text <> '') and (not ValidateIP(Text)) then
-    begin
-      // Aqui você pode escolher:
-      // 1) Mostrar mensagem
-      // ShowMessage('IP inválido!');
-      // 2) Limpar o campo
-      Text := '';
-      // 3) Ou até colocar '0.0.0.0'
-      // Text := '0.0.0.0';
-    end;
-  end;
+  if (FMaskType = mtServerIp) and (Text <> '') then
+    if not ValidateIP(Text) then
+      inherited Text := '';
 end;
 
 end.
