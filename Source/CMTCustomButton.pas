@@ -23,6 +23,8 @@ type
     FTextAlignment: TAlignment;
     FCenterImageOnly: Boolean;
     FActive: Boolean;
+    FAllowActive: Boolean;
+    FActiveColor: TColor;
 
     procedure SetBaseColor(Value: TColor);
     procedure SetHoverColor(Value: TColor);
@@ -40,6 +42,11 @@ type
     procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
     procedure CMEnter(var Message: TCMEnter); message CM_ENTER;
     procedure CMExit(var Message: TCMExit); message CM_EXIT;
+    procedure CMMouseCaptureChanged(var Message: TMessage); message CM_BASE + 32;
+
+    procedure WMLButtonDown(var Message: TWMLButtonDown); message WM_LBUTTONDOWN;
+    procedure WMCaptureChanged(var Message: TMessage); message WM_CAPTURECHANGED;
+    procedure WMLButtonUp(var Message: TWMLButtonUp); message WM_LBUTTONUP;
   protected
     procedure Paint; override;
     procedure Resize; override;
@@ -48,6 +55,8 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+
+    procedure ClearHover;
   published
     property Caption;
     property Align;
@@ -91,8 +100,9 @@ type
     property ImageSpacing: Integer read FImageSpacing write SetImageSpacing default 4;
     property TextAlignment: TAlignment read FTextAlignment write SetTextAlignment default taCenter;
     property CenterImageOnly: Boolean read FCenterImageOnly write SetCenterImageOnly default False;
-
+    property AllowActive: Boolean read FAllowActive write FAllowActive default True;
     property Active: Boolean read FActive write SetActive;
+    property ActiveColor: TColor read FActiveColor write FActiveColor default clNavy;
   end;
 
 procedure Register;
@@ -110,7 +120,9 @@ begin
   ControlStyle := ControlStyle + [csOpaque, csCaptureMouse, csClickEvents, csDoubleClicks];
   DoubleBuffered := True;
   FTextAlignment := taCenter;
-  FActive := False; // Inicializa a nova propriedade como False
+  FActive := False;
+  FAllowActive := True;
+  FActiveColor := clNavy;
 
   Width := 120;
   Height := 40;
@@ -234,13 +246,71 @@ begin
   end;
 end;
 
+procedure TCMTCustomButton.WMCaptureChanged(var Message: TMessage);
+begin
+  inherited;
+
+  if not FActive then
+  begin
+    FHovering := False;
+    Invalidate;
+  end;
+end;
+
+procedure TCMTCustomButton.WMLButtonDown(var Message: TWMLButtonDown);
+begin
+  inherited;
+
+  // Botões que não podem ser Active nunca ficam marcados
+  if not FAllowActive then
+  begin
+    FHovering := False;
+    Invalidate;
+  end;
+end;
+
+procedure TCMTCustomButton.WMLButtonUp(var Message: TWMLButtonUp);
+var
+  P: TPoint;
+begin
+  inherited;
+
+  if not FActive then
+  begin
+    P := ScreenToClient(Mouse.CursorPos);
+    if not PtInRect(ClientRect, P) then
+    begin
+      FHovering := False;
+      Invalidate;
+    end;
+  end;
+end;
+
 procedure TCMTCustomButton.SetActive(const Value: Boolean);
 begin
+  if not FAllowActive then
+  begin
+    FActive := False;
+    FHovering := False;
+    Invalidate;
+    Exit;
+  end;
+
   if FActive <> Value then
   begin
     FActive := Value;
-    // Define FHovering de acordo com a nova propriedade 'Active'
-    FHovering := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TCMTCustomButton.CMMouseCaptureChanged(var Message: TMessage);
+begin
+  inherited;
+
+  // Se não estiver ativo, nunca pode manter hover preso
+  if not FActive then
+  begin
+    FHovering := False;
     Invalidate;
   end;
 end;
@@ -259,26 +329,21 @@ end;
 procedure TCMTCustomButton.CMMouseLeave(var Message: TMessage);
 begin
   inherited;
-  // Apenas muda o estado se o botão não estiver ativo permanentemente
   if not FActive then
-    FHovering := Focused; // mantém o hover se ainda estiver com foco
-  Invalidate;
+  begin
+    FHovering := False;
+    Invalidate;
+  end;
 end;
 
 procedure TCMTCustomButton.CMEnter(var Message: TCMEnter);
 begin
   inherited;
-  FHovering := True;
-  Invalidate;
 end;
 
 procedure TCMTCustomButton.CMExit(var Message: TCMExit);
 begin
   inherited;
-  // Apenas muda o estado se o botão não estiver ativo permanentemente
-  if not FActive then
-    FHovering := False;
-  Invalidate;
 end;
 
 procedure TCMTCustomButton.Paint;
@@ -292,8 +357,20 @@ begin
 
   R := ClientRect;
 
-  // Usa a cor de hover se estiver ativo ou se o mouse estiver sobre ele
-  if FActive or FHovering then
+  // ==============================
+  // DEFINIÇÃO DE CORES (REGRA FINAL)
+  // ==============================
+  if not Enabled then
+  begin
+    BgColor := clBtnShadow;
+    TxtColor := clBtnHighlight;
+  end
+  else if FActive then
+  begin
+    BgColor := FActiveColor;
+    TxtColor := FHoverFontColor;
+  end
+  else if FHovering then
   begin
     BgColor := FHoverColor;
     TxtColor := FHoverFontColor;
@@ -304,10 +381,23 @@ begin
     TxtColor := FFontColor;
   end;
 
+  // ==============================
+  // FUNDO
+  // ==============================
   Canvas.Brush.Color := BgColor;
   Canvas.Pen.Style := psClear;
-  Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, FCornerRadius, FCornerRadius);
+  Canvas.RoundRect(
+    R.Left,
+    R.Top,
+    R.Right,
+    R.Bottom,
+    FCornerRadius,
+    FCornerRadius
+  );
 
+  // ==============================
+  // TEXTO
+  // ==============================
   Canvas.Font.Assign(Font);
   Canvas.Font.Color := TxtColor;
 
@@ -316,6 +406,9 @@ begin
   ImgRect := Rect(0, 0, 0, 0);
   TextRect := R;
 
+  // ==============================
+  // IMAGEM
+  // ==============================
   if Assigned(FImage.Graphic) and not FImage.Graphic.Empty then
   begin
     ImgW := FImage.Width;
@@ -323,9 +416,9 @@ begin
 
     if Caption = '' then
     begin
-      ImgRect.Left := (R.Width - ImgW) div 2;
-      ImgRect.Top := (R.Height - ImgH) div 2;
-      ImgRect.Right := ImgRect.Left + ImgW;
+      ImgRect.Left   := (R.Width - ImgW) div 2;
+      ImgRect.Top    := (R.Height - ImgH) div 2;
+      ImgRect.Right  := ImgRect.Left + ImgW;
       ImgRect.Bottom := ImgRect.Top + ImgH;
 
       Canvas.Draw(ImgRect.Left, ImgRect.Top, FImage.Graphic);
@@ -335,18 +428,18 @@ begin
     case FImagePosition of
       ipLeft:
         begin
-          ImgRect.Left := R.Left + 8;
-          ImgRect.Top := (R.Height - ImgH) div 2;
-          ImgRect.Right := ImgRect.Left + ImgW;
+          ImgRect.Left   := R.Left + 8;
+          ImgRect.Top    := (R.Height - ImgH) div 2;
+          ImgRect.Right  := ImgRect.Left + ImgW;
           ImgRect.Bottom := ImgRect.Top + ImgH;
-          TextRect.Left := ImgRect.Right + FImageSpacing;
+          TextRect.Left  := ImgRect.Right + FImageSpacing;
         end;
 
       ipRight:
         begin
-          ImgRect.Right := R.Right - 8;
-          ImgRect.Top := (R.Height - ImgH) div 2;
-          ImgRect.Left := ImgRect.Right - ImgW;
+          ImgRect.Right  := R.Right - 8;
+          ImgRect.Top    := (R.Height - ImgH) div 2;
+          ImgRect.Left   := ImgRect.Right - ImgW;
           ImgRect.Bottom := ImgRect.Top + ImgH;
           TextRect.Right := ImgRect.Left - FImageSpacing;
         end;
@@ -354,36 +447,40 @@ begin
       ipTop:
         begin
           TotalHeight := ImgH + FImageSpacing + Canvas.TextHeight(Caption);
-          ImgRect.Top := (R.Height - TotalHeight) div 2;
-          ImgRect.Left := (R.Width - ImgW) div 2;
-          ImgRect.Bottom := ImgRect.Top + ImgH;
-          ImgRect.Right := ImgRect.Left + ImgW;
 
-          TextRect.Top := ImgRect.Bottom + FImageSpacing;
-          TextRect.Left := R.Left;
-          TextRect.Right := R.Right;
+          ImgRect.Top    := (R.Height - TotalHeight) div 2;
+          ImgRect.Left   := (R.Width - ImgW) div 2;
+          ImgRect.Bottom := ImgRect.Top + ImgH;
+          ImgRect.Right  := ImgRect.Left + ImgW;
+
+          TextRect.Top    := ImgRect.Bottom + FImageSpacing;
+          TextRect.Left   := R.Left;
+          TextRect.Right  := R.Right;
           TextRect.Bottom := TextRect.Top + Canvas.TextHeight(Caption);
         end;
 
       ipBottom:
         begin
           TotalHeight := ImgH + FImageSpacing + Canvas.TextHeight(Caption);
-          TextRect.Top := (R.Height - TotalHeight) div 2;
-          TextRect.Left := R.Left;
-          TextRect.Right := R.Right;
+
+          TextRect.Top    := (R.Height - TotalHeight) div 2;
+          TextRect.Left   := R.Left;
+          TextRect.Right  := R.Right;
           TextRect.Bottom := TextRect.Top + Canvas.TextHeight(Caption);
 
-          ImgRect.Top := TextRect.Bottom + FImageSpacing;
-          ImgRect.Left := (R.Width - ImgW) div 2;
+          ImgRect.Top    := TextRect.Bottom + FImageSpacing;
+          ImgRect.Left   := (R.Width - ImgW) div 2;
           ImgRect.Bottom := ImgRect.Top + ImgH;
-          ImgRect.Right := ImgRect.Left + ImgW;
+          ImgRect.Right  := ImgRect.Left + ImgW;
         end;
     end;
 
     Canvas.Draw(ImgRect.Left, ImgRect.Top, FImage.Graphic);
   end;
 
-  // Alinhamento do texto
+  // ==============================
+  // ALINHAMENTO DO TEXTO
+  // ==============================
   Flags := DT_SINGLELINE;
 
   case FImagePosition of
@@ -392,8 +489,8 @@ begin
   else
     Flags := Flags or DT_VCENTER;
     case FTextAlignment of
-      taLeftJustify: Flags := Flags or DT_LEFT;
-      taCenter:      Flags := Flags or DT_CENTER;
+      taLeftJustify:  Flags := Flags or DT_LEFT;
+      taCenter:       Flags := Flags or DT_CENTER;
       taRightJustify: Flags := Flags or DT_RIGHT;
     end;
   end;
@@ -407,9 +504,24 @@ begin
   Invalidate;
 end;
 
+procedure TCMTCustomButton.ClearHover;
+begin
+  if not FActive then
+  begin
+    FHovering := False;
+    Invalidate;
+  end;
+end;
+
 procedure TCMTCustomButton.Click;
 begin
   inherited;
+
+  if not FAllowActive then
+  begin
+    FHovering := False;
+    Invalidate;
+  end;
 end;
 
 end.
