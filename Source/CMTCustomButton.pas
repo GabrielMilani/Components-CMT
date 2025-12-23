@@ -44,6 +44,7 @@ type
     procedure Paint; override;
     procedure Resize; override;
     procedure Click; override;
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -59,7 +60,26 @@ type
     property ShowHint;
     property TabOrder;
     property TabStop;
+
+    property Cursor;
+
     property OnClick;
+    property OnDblClick;
+
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnMouseDown;
+    property OnMouseUp;
+    property OnMouseMove;
+
+    property OnKeyDown;
+    property OnKeyUp;
+    property OnKeyPress;
+
+    property OnEnter;
+    property OnExit;
+
+    property OnContextPopup;
 
     property BaseColor: TColor read FBaseColor write SetBaseColor default clSkyBlue;
     property HoverColor: TColor read FHoverColor write SetHoverColor default clNavy;
@@ -115,6 +135,16 @@ destructor TCMTCustomButton.Destroy;
 begin
   FImage.Free;
   inherited;
+end;
+
+procedure TCMTCustomButton.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  inherited;
+  if (Key = VK_RETURN) or (Key = VK_SPACE) then
+  begin
+    Click;
+    Key := 0;
+  end;
 end;
 
 procedure TCMTCustomButton.SetBaseColor(Value: TColor);
