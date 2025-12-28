@@ -11,6 +11,7 @@ type
   private
     FAutoSizeColumns: Boolean;
     FFixedColumnNames: TStrings;
+    FFlexColumnNames: TStrings;
     procedure SetAutoSizeColumns(const Value: Boolean);
     procedure AdjustColumnWidths;
   protected
@@ -24,6 +25,7 @@ type
   published
     property AutoSizeColumns: Boolean read FAutoSizeColumns write SetAutoSizeColumns default False;
     property FixedColumnNames: TStrings read FFixedColumnNames write FFixedColumnNames;
+    property FlexColumnNames: TStrings read FFlexColumnNames write FFlexColumnNames;
   end;
 
 procedure Register;
@@ -39,6 +41,7 @@ constructor TCMTDBGrid.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FFixedColumnNames := TStringList.Create;
+  FFlexColumnNames := TStringList.Create;
   // Estilo visual
   BorderStyle := bsNone;
   DrawingStyle := gdsClassic;
@@ -83,6 +86,7 @@ end;
 destructor TCMTDBGrid.destroy;
 begin
   FFixedColumnNames.Free;
+  FFlexColumnNames.Free;
   inherited;
 end;
 
@@ -98,67 +102,38 @@ end;
 
 procedure TCMTDBGrid.AdjustColumnWidths;
 var
-  i, TotalWidth, GridUsableWidth, ExtraWidth, FlexCount: Integer;
-  BaseWidths: array of Integer;
-  CellText: string;
+  i: Integer;
+  FixedWidth, FlexCount, AvailableWidth, EachFlexWidth: Integer;
 begin
   if Columns.Count = 0 then Exit;
 
-  GridUsableWidth := ClientWidth - 2;
-  if dgColLines in Options then
-    Dec(GridUsableWidth, GridLineWidth * Columns.Count);
-
-  SetLength(BaseWidths, Columns.Count);
-  TotalWidth := 0;
+  FixedWidth := 0;
   FlexCount := 0;
 
-  // Calcula largura base e soma apenas colunas flexíveis
+  // Soma larguras fixas e conta flexíveis
   for i := 0 to Columns.Count - 1 do
   begin
-    if FFixedColumnNames.IndexOf(Columns[i].FieldName) <> -1 then
-    begin
-      Dec(GridUsableWidth, Columns[i].Width); // reserva espaço fixo
-      Continue;
-    end;
-
-    Canvas.Font.Assign(TitleFont);
-    BaseWidths[i] := Canvas.TextWidth(Columns[i].Title.Caption + '  ');
-
-    Canvas.Font.Assign(Font);
-    if Assigned(Columns[i].Field) then
-      CellText := Columns[i].Field.DisplayText
-    else
-      CellText := '';
-
-    BaseWidths[i] := Max(BaseWidths[i], Canvas.TextWidth(CellText + '  ')) + 8;
-    Inc(TotalWidth, BaseWidths[i]);
-    Inc(FlexCount);
+    if FFixedColumnNames.IndexOf(Columns[i].FieldName) >= 0 then
+      Inc(FixedWidth, Columns[i].Width)
+    else if FFlexColumnNames.IndexOf(Columns[i].FieldName) >= 0 then
+      Inc(FlexCount);
   end;
 
-  if (TotalWidth <= 0) or (FlexCount = 0) then Exit;
+  if FlexCount = 0 then Exit;
 
-  // Redimensiona proporcionalmente apenas colunas flexíveis
+  AvailableWidth := ClientWidth - FixedWidth - 2;
+
+  if dgColLines in Options then
+    Dec(AvailableWidth, GridLineWidth * Columns.Count);
+
+  if AvailableWidth <= 0 then Exit;
+
+  EachFlexWidth := AvailableWidth div FlexCount;
+
+  // Aplica somente nas colunas flexíveis
   for i := 0 to Columns.Count - 1 do
-    if FFixedColumnNames.IndexOf(Columns[i].FieldName) = -1 then
-      Columns[i].Width := MulDiv(BaseWidths[i], GridUsableWidth, TotalWidth);
-
-  // Distribui pixels restantes
-  ExtraWidth := GridUsableWidth;
-  for i := 0 to Columns.Count - 1 do
-    if FFixedColumnNames.IndexOf(Columns[i].FieldName) = -1 then
-      Dec(ExtraWidth, Columns[i].Width);
-
-  i := 0;
-  while ExtraWidth > 0 do
-  begin
-    if FFixedColumnNames.IndexOf(Columns[i].FieldName) = -1 then
-    begin
-      Columns[i].Width := Columns[i].Width + 1;
-      Dec(ExtraWidth);
-    end;
-    Inc(i);
-    if i >= Columns.Count then i := 0;
-  end;
+    if FFlexColumnNames.IndexOf(Columns[i].FieldName) >= 0 then
+      Columns[i].Width := EachFlexWidth;
 end;
 
 procedure TCMTDBGrid.Loaded;

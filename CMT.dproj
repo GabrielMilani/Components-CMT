@@ -105,6 +105,7 @@
         <DCCReference Include="Source\CMTMaskEdit.pas"/>
         <DCCReference Include="Source\CMTDateTimePicker.pas"/>
         <DCCReference Include="Source\CMTRadioButton.pas"/>
+        <DCCReference Include="Source\CMTNumericEdit.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
