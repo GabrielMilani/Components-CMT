@@ -44,6 +44,7 @@ contains
   CMTMaskEdit in 'Source\CMTMaskEdit.pas',
   CMTDateTimePicker in 'Source\CMTDateTimePicker.pas',
   CMTRadioButton in 'Source\CMTRadioButton.pas',
-  CMTNumericEdit in 'Source\CMTNumericEdit.pas';
+  CMTNumericEdit in 'Source\CMTNumericEdit.pas',
+  CMTInfoPanel in 'Source\CMTInfoPanel.pas';
 
 end.
