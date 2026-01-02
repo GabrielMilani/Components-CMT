@@ -4,22 +4,21 @@ interface
 
 uses
   System.Classes, System.SysUtils,
-  Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Graphics, Vcl.Forms,
-  CMTNumericEdit;
+  Vcl.Controls, Vcl.StdCtrls, Vcl.Graphics,
+  CMTNumericEdit, Vcl.Forms;
 
 type
   TCMTInfoPanel = class(TCustomControl)
   private
     // Controles internos
-    FBar: TPanel;
     FTitleLabel: TLabel;
     FValueEdit: TCMTNumericEdit;
 
-    // Fonts próprias (seguras para design-time)
+    // Fonts próprias
     FTitleFont: TFont;
     FValueFont: TFont;
 
-    // Valor lógico (AGORA Currency)
+    // Valor lógico
     FValue: Currency;
 
     // Aparência
@@ -52,6 +51,7 @@ type
   protected
     procedure Resize; override;
     procedure Loaded; override;
+    procedure Paint; override;
 
   public
     constructor Create(AOwner: TComponent); override;
@@ -69,14 +69,14 @@ type
 
     // Conteúdo
     property Title: string read GetTitle write SetTitle;
-    property Value: Currency read GetValue write SetValue; // <<< MANTÉM O NOME
+    property Value: Currency read GetValue write SetValue;
 
     // Visual
     property BarColor: TColor read FBarColor write SetBarColor default clRed;
     property BarWidth: Integer read FBarWidth write SetBarWidth default 5;
     property BackgroundColor: TColor read FBackgroundColor write SetBackgroundColor;
 
-    // Fontes (Object Inspector)
+    // Fontes
     property TitleFont: TFont read FTitleFont write SetTitleFont;
     property ValueFont: TFont read FValueFont write SetValueFont;
   end;
@@ -99,14 +99,13 @@ begin
   Width  := 300;
   Height := 70;
 
-  ParentBackground := False;
+  // Cores padrão
   Color := $00F2F2F2;
   FBackgroundColor := Color;
-
   FBarColor := clRed;
   FBarWidth := 5;
 
-  // === Fonts próprias (ESSENCIAL) ===
+  // Fonts
   FTitleFont := TFont.Create;
   FValueFont := TFont.Create;
 
@@ -122,22 +121,14 @@ begin
   // Valor inicial
   FValue := 0;
 
-  // === Barra lateral ===
-  FBar := TPanel.Create(Self);
-  FBar.Parent := Self;
-  FBar.Align  := alLeft;
-  FBar.Width  := FBarWidth;
-  FBar.BevelOuter := bvNone;
-  FBar.Color := FBarColor;
-
-  // === Título ===
+  // ===== TÍTULO =====
   FTitleLabel := TLabel.Create(Self);
   FTitleLabel.Parent := Self;
   FTitleLabel.Caption := 'TÍTULO';
   FTitleLabel.Transparent := True;
   FTitleLabel.Font.Assign(FTitleFont);
 
-  // === Valor (TCMTNumericEdit) ===
+  // ===== VALOR =====
   FValueEdit := TCMTNumericEdit.Create(Self);
   FValueEdit.Parent := Self;
   FValueEdit.BorderStyle := bsNone;
@@ -145,7 +136,7 @@ begin
   FValueEdit.TabStop := False;
   FValueEdit.Cursor := crArrow;
   FValueEdit.Alignment := taRightJustify;
-  FValueEdit.Color := Color;
+  FValueEdit.Color := FBackgroundColor;
   FValueEdit.Font.Assign(FValueFont);
   FValueEdit.Value := FValue;
 end;
@@ -166,17 +157,30 @@ begin
   Resize;
 end;
 
+procedure TCMTInfoPanel.Paint;
+begin
+  inherited;
+
+  // Fundo
+  Canvas.Brush.Color := FBackgroundColor;
+  Canvas.FillRect(ClientRect);
+
+  // Barra lateral esquerda
+  Canvas.Brush.Color := FBarColor;
+  Canvas.FillRect(Rect(0, 0, FBarWidth, Height));
+end;
+
 procedure TCMTInfoPanel.Resize;
 begin
   inherited;
 
-  // Título sempre no topo
+  // Título
   FTitleLabel.Left := FBarWidth + 10;
   FTitleLabel.Top  := TITLE_TOP_PADDING;
 
-  // Valor alinhado à direita
+  // Valor
+  FValueEdit.Left  := FBarWidth + 10;
   FValueEdit.Width := Width - FBarWidth - 20;
-  FValueEdit.Left  := Width - FValueEdit.Width - 10;
 
   AjustarAlturaValor;
 end;
@@ -226,21 +230,23 @@ end;
 procedure TCMTInfoPanel.SetBarColor(const Value: TColor);
 begin
   FBarColor := Value;
-  FBar.Color := Value;
+  Invalidate;
 end;
 
 procedure TCMTInfoPanel.SetBackgroundColor(const Value: TColor);
 begin
   FBackgroundColor := Value;
   Color := Value;
-  FValueEdit.Color := Value;
+  if Assigned(FValueEdit) then
+    FValueEdit.Color := Value;
+  Invalidate;
 end;
 
 procedure TCMTInfoPanel.SetBarWidth(const Value: Integer);
 begin
   FBarWidth := Value;
-  FBar.Width := Value;
   Resize;
+  Invalidate;
 end;
 
 procedure TCMTInfoPanel.SetTitle(const Value: string);
