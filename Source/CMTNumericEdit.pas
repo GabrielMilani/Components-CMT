@@ -23,6 +23,7 @@ type
   protected
     procedure KeyPress(var Key: Char); override;
     procedure DoExit; override;
+    procedure DoEnter; override;
   public
     constructor Create(AOwner: TComponent); override;
 
@@ -77,11 +78,22 @@ begin
   Key := #0;
 end;
 
+procedure TCMTNumericEdit.DoEnter;
+begin
+  inherited;
+
+  if Abs(GetValue) < 0.0000001 then
+    Text := '';
+end;
+
 procedure TCMTNumericEdit.DoExit;
 begin
   inherited;
 
-  Text := FormatFloat(FDisplayFormat, Value);
+  if Trim(Text) = '' then
+    Text := FormatFloat(FDisplayFormat, 0)
+  else
+    Text := FormatFloat(FDisplayFormat, Value);
 end;
 
 function TCMTNumericEdit.Normalizar(const S: string): string;
