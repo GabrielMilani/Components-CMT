@@ -3,67 +3,71 @@
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages,
-  System.SysUtils, System.Classes, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls,
-  Vcl.Forms, Vcl.Graphics, Vcl.ComCtrls, Vcl.Mask, System.Types,
-  CMTCustomButton;
+  System.SysUtils, System.Classes,
+  Winapi.Windows,
+  Vcl.Controls, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.Mask,
+  Vcl.ComCtrls, Vcl.Graphics,
+  CMTCustomButton, Winapi.Messages, Vcl.Forms;
 
 type
   TCMTDateEdit = class(TCustomPanel)
   private
     FEdit: TMaskEdit;
     FButton: TCMTCustomButton;
-    FPopupCalendar: TMonthCalendar;
-    FPopupForm: TForm;
-    FEditColor: TColor;
-    FButtonColor: TColor;
+    FPicker: TDateTimePicker;
 
-    function GetDate: TDateTime;
-    procedure SetDate(const Value: TDateTime);
+    // Aparência
+    FFieldColor: TColor;
+    FBorderColor: TColor;
+    FButtonColor: TColor;
+    FButtonFontColor: TColor;
+
+    // === Compatibilidade ===
     function GetText: string;
     procedure SetText(const Value: string);
-    function IsDateValid: Boolean;
-    procedure ShowCalendar(Sender: TObject);
-    procedure CalendarDateSelected(Sender: TObject);
-    procedure CalendarClosed(Sender: TObject);
-    procedure SetEditColor(const Value: TColor);
+
+    // === Data ===
+    function GetDate: TDate;
+    procedure SetDate(const Value: TDate);
+
+    // === Internos ===
+    procedure ButtonClick(Sender: TObject);
+    procedure PickerChange(Sender: TObject);
+    procedure SyncFonts;
+
+    procedure SetFieldColor(const Value: TColor);
+    procedure SetBorderColor(const Value: TColor);
     procedure SetButtonColor(const Value: TColor);
-    procedure SetButtonHoverColor(const Value: TColor);
     procedure SetButtonFontColor(const Value: TColor);
-    procedure SetEditFontColor(const Value: TColor);
-    function GetEditFont: TFont;
-    procedure SetEditFont(const Value: TFont);
-    procedure SetButton(const Value: TCMTCustomButton);
+
   protected
-    procedure Resize; override;
+    procedure Paint; override;
+    procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
+
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
+
   published
-    // Propriedades visuais herdadas
-    property Anchors;
+    // ===== USO CORRETO =====
+    property Date: TDate read GetDate write SetDate;
+
+    // ===== COMPATIBILIDADE =====
+    property Text: string read GetText write SetText;
+
+    // ===== APARÊNCIA =====
+    property FieldColor: TColor read FFieldColor write SetFieldColor;
+    property BorderColor: TColor read FBorderColor write SetBorderColor;
+    property ButtonColor: TColor read FButtonColor write SetButtonColor;
+    property ButtonFontColor: TColor read FButtonFontColor write SetButtonFontColor;
+
+    // ===== PADRÃO VCL =====
+    property Font;
     property Align;
-    property Constraints;
+    property Anchors;
     property Enabled;
     property Visible;
     property TabOrder;
     property TabStop;
-    property PopupMenu;
-    property ShowHint;
-    property ParentShowHint;
-    property Hint;
-
-    // Propriedades específicas do componente
-    property Date: TDateTime read GetDate write SetDate;
-    property Text: string read GetText write SetText;
-    property IsValid: Boolean read IsDateValid;
-    property EditColor: TColor read FEditColor write SetEditColor;
-    property EditFont: TFont read GetEditFont write SetEditFont;
-    property EditFontColor: TColor write SetEditFontColor;
-    property ButtonColor: TColor read FButtonColor write SetButtonColor;
-    property ButtonHoverColor: TColor write SetButtonHoverColor;
-    property ButtonFontColor: TColor write SetButtonFontColor;
-    property Button: TCMTCustomButton read FButton write SetButton;
   end;
 
 procedure Register;
@@ -79,120 +83,113 @@ end;
 
 constructor TCMTDateEdit.Create(AOwner: TComponent);
 begin
-  inherited Create(AOwner);
+  inherited;
+
   Width := 160;
-  Height := 24;
+  Height := 26;
   BevelOuter := bvNone;
 
-  // Campo de edição
-  FEdit := TMaskEdit.Create(Self);
-  FEdit.Parent := Self;
-  FEdit.EditMask := '99/99/9999';
-  FEdit.Align := alClient;
-  FEdit.Text := '';
-  FEdit.TabStop := True;
-  FEdit.Ctl3D := False;
-  FEdit.BorderStyle := bsNone;
-  FEditColor := clWindow;
-  FEdit.Color := FEditColor;
+  // ===== Fonte padrão =====
+  Font.Name := 'Segoe UI';
+  Font.Size := 11;
 
-  // Botão padrão
+  // ===== Cores padrão =====
+  FFieldColor := clBtnFace;
+  FBorderColor := clGray;
+  FButtonColor := clBtnFace;
+  FButtonFontColor := clWindowText;
+
+  Color := FFieldColor;
+
+  // ===== BOTÃO ▼ =====
   FButton := TCMTCustomButton.Create(Self);
   FButton.Parent := Self;
   FButton.Align := alRight;
+  FButton.Width := 28;
   FButton.Caption := '▼';
-  FButton.Width := 24;
-  FButton.BaseColor := clSkyBlue;
-  FButton.HoverColor := clNavy;
-  FButton.FontColor := clWhite;
-  FButton.HoverFontColor := clWhite;
+  FButton.BaseColor := FButtonColor;
+  FButton.FontColor := FButtonFontColor;
+  FButton.HoverColor := $00E6E6E6;
   FButton.CornerRadius := 0;
-  FButton.OnClick := ShowCalendar;
-  FButton.Name := 'Button';
   FButton.SetSubComponent(True);
-  FButtonColor := FButton.BaseColor;
+  FButton.OnClick := ButtonClick;
 
-  // Formulário pop-up com calendário (como drop-down)
-  FPopupForm := TForm.CreateNew(nil);
-  FPopupForm.BorderStyle := bsNone;
-  FPopupForm.FormStyle := fsStayOnTop;
-  FPopupForm.Position := poDesigned;
-  FPopupForm.ClientWidth := 220;
-  FPopupForm.ClientHeight := 190;
-  FPopupForm.PopupMode := pmExplicit;
-  FPopupForm.PopupParent := GetParentForm(Self);
-  FPopupForm.OnDeactivate := CalendarClosed;
+  // ===== EDIT (__/__/____) SEM BORDA =====
+  FEdit := TMaskEdit.Create(Self);
+  FEdit.Parent := Self;
+  FEdit.Align := alClient;
+  FEdit.Margins.SetBounds(6, 4, 6, 4);
+  FEdit.EditMask := '99/99/9999';
 
-  FPopupCalendar := TMonthCalendar.Create(FPopupForm);
-  FPopupCalendar.Parent := FPopupForm;
-  FPopupCalendar.Align := alClient;
-  FPopupCalendar.MultiSelect := False;
-  FPopupCalendar.OnClick := CalendarDateSelected;
-  FPopupCalendar.OnExit := CalendarClosed;
+  FEdit.BorderStyle := bsNone;
+  FEdit.Ctl3D := False;
+  FEdit.ParentColor := True;
+  FEdit.BevelInner := bvNone;
+  FEdit.BevelOuter := bvNone;
+
+  FEdit.Color := FFieldColor;
+
+  // ===== DATETIMEPICKER (POPUP NATIVO) =====
+  FPicker := TDateTimePicker.Create(Self);
+  FPicker.Parent := Self;
+  FPicker.Align := alRight;
+  FPicker.Width := 1;
+  FPicker.Kind := dtkDate;
+  FPicker.TabStop := False;
+  FPicker.OnChange := PickerChange;
+
+  SyncFonts;
 end;
 
-destructor TCMTDateEdit.Destroy;
+procedure TCMTDateEdit.SyncFonts;
 begin
-  FPopupForm.Free;
+  if Assigned(FEdit) then
+    FEdit.Font.Assign(Font);
+
+  if Assigned(FButton) then
+    FButton.Font.Assign(Font);
+end;
+
+procedure TCMTDateEdit.CMFontChanged(var Message: TMessage);
+begin
   inherited;
+  SyncFonts;
 end;
 
-procedure TCMTDateEdit.SetButton(const Value: TCMTCustomButton);
+procedure TCMTDateEdit.Paint;
 begin
-  if Assigned(FButton) then
-    FButton.Free;
+  inherited;
 
-  FButton := Value;
+  // ===== BORDA ÚNICA DO COMPONENTE =====
+  Canvas.Pen.Color := FBorderColor;
+  Canvas.Brush.Style := bsClear;
+  Canvas.Rectangle(0, 0, Width, Height);
 
-  if Assigned(FButton) then
-  begin
-    FButton.Parent := Self;
-    FButton.Align := alRight;
-    FButton.Width := 24;
-    FButton.OnClick := ShowCalendar;
-    FButton.Name := 'Button';
-    FButton.SetSubComponent(True);
-  end;
+  // ===== DIVISOR ENTRE EDIT E BOTÃO =====
+  Canvas.MoveTo(Width - FButton.Width - 1, 2);
+  Canvas.LineTo(Width - FButton.Width - 1, Height - 2);
 end;
 
-procedure TCMTDateEdit.ShowCalendar(Sender: TObject);
-var
-  P: TPoint;
+procedure TCMTDateEdit.ButtonClick(Sender: TObject);
 begin
-  P := ClientToScreen(Point(0, Height));
-  FPopupForm.Left := P.X;
-  FPopupForm.Top := P.Y;
-  FPopupCalendar.Date := Now;
-
-  FPopupForm.Show;
-  SetForegroundWindow(FPopupForm.Handle); // garante que fica na frente
-  FPopupCalendar.SetFocus;
+  FPicker.SetFocus;
+  SendMessage(FPicker.Handle, WM_SYSKEYDOWN, VK_DOWN, 0);
 end;
 
-procedure TCMTDateEdit.CalendarDateSelected(Sender: TObject);
+procedure TCMTDateEdit.PickerChange(Sender: TObject);
 begin
-  FEdit.Text := FormatDateTime('dd/mm/yyyy', FPopupCalendar.Date);
-  FPopupForm.Hide;
+  FEdit.Text := FormatDateTime('dd/mm/yyyy', FPicker.Date);
 end;
 
-procedure TCMTDateEdit.CalendarClosed(Sender: TObject);
+function TCMTDateEdit.GetDate: TDate;
 begin
-  if FPopupForm.Visible then
-    FPopupForm.Hide;
+  Result := FPicker.Date;
 end;
 
-function TCMTDateEdit.GetDate: TDateTime;
+procedure TCMTDateEdit.SetDate(const Value: TDate);
 begin
-  if not TryStrToDate(FEdit.Text, Result) then
-    Result := 0;
-end;
-
-procedure TCMTDateEdit.SetDate(const Value: TDateTime);
-begin
-  if Value = 0 then
-    FEdit.Text := ''
-  else
-    FEdit.Text := FormatDateTime('dd/mm/yyyy', Value);
+  FPicker.Date := Value;
+  FEdit.Text := FormatDateTime('dd/mm/yyyy', Value);
 end;
 
 function TCMTDateEdit.GetText: string;
@@ -201,71 +198,39 @@ begin
 end;
 
 procedure TCMTDateEdit.SetText(const Value: string);
+var
+  D: TDateTime;
 begin
   FEdit.Text := Value;
+
+  if TryStrToDate(Value, D) then
+    FPicker.Date := D;
 end;
 
-function TCMTDateEdit.IsDateValid: Boolean;
-var
-  Dummy: TDateTime;
+procedure TCMTDateEdit.SetFieldColor(const Value: TColor);
 begin
-  Result := (Trim(FEdit.Text) <> '') and TryStrToDate(FEdit.Text, Dummy);
-end;
-
-procedure TCMTDateEdit.SetEditColor(const Value: TColor);
-begin
-  FEditColor := Value;
+  FFieldColor := Value;
+  Color := Value;
   FEdit.Color := Value;
+  Invalidate;
+end;
+
+procedure TCMTDateEdit.SetBorderColor(const Value: TColor);
+begin
+  FBorderColor := Value;
+  Invalidate;
 end;
 
 procedure TCMTDateEdit.SetButtonColor(const Value: TColor);
 begin
   FButtonColor := Value;
-  if Assigned(FButton) then
-  begin
-    FButton.BaseColor := Value;
-    FButton.Invalidate;
-  end;
-end;
-
-procedure TCMTDateEdit.SetButtonHoverColor(const Value: TColor);
-begin
-  if Assigned(FButton) then
-  begin
-    FButton.HoverColor := Value;
-    FButton.Invalidate;
-  end;
+  FButton.BaseColor := Value;
 end;
 
 procedure TCMTDateEdit.SetButtonFontColor(const Value: TColor);
 begin
-  if Assigned(FButton) then
-  begin
-    FButton.FontColor := Value;
-    FButton.Invalidate;
-  end;
-end;
-
-procedure TCMTDateEdit.SetEditFontColor(const Value: TColor);
-begin
-  FEdit.Font.Color := Value;
-end;
-
-function TCMTDateEdit.GetEditFont: TFont;
-begin
-  Result := FEdit.Font;
-end;
-
-procedure TCMTDateEdit.SetEditFont(const Value: TFont);
-begin
-  FEdit.Font.Assign(Value);
-end;
-
-procedure TCMTDateEdit.Resize;
-begin
-  inherited;
-  if Assigned(FButton) then
-    FButton.Height := Height;
+  FButtonFontColor := Value;
+  FButton.FontColor := Value;
 end;
 
 end.
