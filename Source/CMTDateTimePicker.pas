@@ -34,6 +34,7 @@ type
     procedure ButtonClick(Sender: TObject);
     procedure PickerChange(Sender: TObject);
     procedure SyncFonts;
+    procedure EditEnter(Sender: TObject);
 
     procedure SetFieldColor(const Value: TColor);
     procedure SetBorderColor(const Value: TColor);
@@ -126,8 +127,9 @@ begin
   FEdit.ParentColor := True;
   FEdit.BevelInner := bvNone;
   FEdit.BevelOuter := bvNone;
-
+  FEdit.OnEnter := EditEnter;
   FEdit.Color := FFieldColor;
+  FEdit.Clear;
 
   // ===== DATETIMEPICKER (POPUP NATIVO) =====
   FPicker := TDateTimePicker.Create(Self);
@@ -139,6 +141,15 @@ begin
   FPicker.OnChange := PickerChange;
 
   SyncFonts;
+end;
+
+procedure TCMTDateEdit.EditEnter(Sender: TObject);
+begin
+  if Trim(FEdit.Text) = '' then
+  begin
+    FEdit.EditMask := '';
+    FEdit.Text := '';
+  end;
 end;
 
 procedure TCMTDateEdit.SyncFonts;
@@ -188,8 +199,13 @@ end;
 
 procedure TCMTDateEdit.SetDate(const Value: TDate);
 begin
-  FPicker.Date := Value;
-  FEdit.Text := FormatDateTime('dd/mm/yyyy', Value);
+  if Value > 0 then
+  begin
+    FPicker.Date := Value;
+    FEdit.Text := FormatDateTime('dd/mm/yyyy', Value);
+  end
+  else
+    FEdit.Clear;
 end;
 
 function TCMTDateEdit.GetText: string;
