@@ -21,6 +21,13 @@ type
     FBorderColor: TColor;
     FButtonColor: TColor;
     FButtonFontColor: TColor;
+    FOnExit: TNotifyEvent;
+    FOnKeyPress: TKeyPressEvent;
+    FOnKeyDown: TKeyEvent;
+    FOnChange: TNotifyEvent;
+    FOnEnter: TNotifyEvent;
+    FOnClick: TNotifyEvent;
+    FOnKeyUp: TKeyEvent;
 
     // === Compatibilidade ===
     function GetText: string;
@@ -41,6 +48,18 @@ type
     procedure SetButtonColor(const Value: TColor);
     procedure SetButtonFontColor(const Value: TColor);
 
+
+    procedure InternalEditEnter(Sender: TObject);
+    procedure InternalEditExit(Sender: TObject);
+    procedure InternalEditChange(Sender: TObject);
+
+    procedure InternalEditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure InternalEditKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure InternalEditKeyPress(Sender: TObject; var Key: Char);
+
+    procedure InternalClick(Sender: TObject);
+
+    function IsFocusInside: Boolean;
   protected
     procedure Paint; override;
     procedure CMFontChanged(var Message: TMessage); message CM_FONTCHANGED;
@@ -69,6 +88,17 @@ type
     property Visible;
     property TabOrder;
     property TabStop;
+
+      // ===== EVENTOS =====
+    property OnEnter: TNotifyEvent read FOnEnter write FOnEnter;
+    property OnExit: TNotifyEvent read FOnExit write FOnExit;
+    property OnChange: TNotifyEvent read FOnChange write FOnChange;
+
+    property OnKeyDown: TKeyEvent read FOnKeyDown write FOnKeyDown;
+    property OnKeyUp: TKeyEvent read FOnKeyUp write FOnKeyUp;
+    property OnKeyPress: TKeyPressEvent read FOnKeyPress write FOnKeyPress;
+
+    property OnClick: TNotifyEvent read FOnClick write FOnClick;
   end;
 
 procedure Register;
@@ -140,6 +170,16 @@ begin
   FPicker.TabStop := False;
   FPicker.OnChange := PickerChange;
 
+  FEdit.OnEnter    := InternalEditEnter;
+  FEdit.OnExit     := InternalEditExit;
+  FEdit.OnChange   := InternalEditChange;
+
+  FEdit.OnKeyDown  := InternalEditKeyDown;
+  FEdit.OnKeyUp    := InternalEditKeyUp;
+  FEdit.OnKeyPress := InternalEditKeyPress;
+
+  FEdit.OnClick    := InternalClick;
+
   SyncFonts;
 end;
 
@@ -183,8 +223,13 @@ end;
 
 procedure TCMTDateEdit.ButtonClick(Sender: TObject);
 begin
+  // Ação ORIGINAL (popup)
   FPicker.SetFocus;
   SendMessage(FPicker.Handle, WM_SYSKEYDOWN, VK_DOWN, 0);
+
+  // Evento EXPOSTO do componente
+  if Assigned(FOnClick) then
+    FOnClick(Self);
 end;
 
 procedure TCMTDateEdit.PickerChange(Sender: TObject);
@@ -211,6 +256,65 @@ end;
 function TCMTDateEdit.GetText: string;
 begin
   Result := FEdit.Text;
+end;
+
+procedure TCMTDateEdit.InternalClick(Sender: TObject);
+begin
+  if Assigned(FOnClick) then
+    FOnClick(Self);
+end;
+
+procedure TCMTDateEdit.InternalEditChange(Sender: TObject);
+begin
+  if Assigned(FOnChange) then
+    FOnChange(Self);
+end;
+
+procedure TCMTDateEdit.InternalEditEnter(Sender: TObject);
+begin
+  if Assigned(FOnEnter) then
+    FOnEnter(Self);
+end;
+
+procedure TCMTDateEdit.InternalEditExit(Sender: TObject);
+begin
+  // ainda está dentro do componente
+  if IsFocusInside then
+    Exit;
+
+  if Assigned(FOnExit) then
+    FOnExit(Self);
+end;
+
+procedure TCMTDateEdit.InternalEditKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if Assigned(FOnKeyDown) then
+    FOnKeyDown(Self, Key, Shift);
+end;
+
+procedure TCMTDateEdit.InternalEditKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Assigned(FOnKeyPress) then
+    FOnKeyPress(Self, Key);
+end;
+
+procedure TCMTDateEdit.InternalEditKeyUp(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if Assigned(FOnKeyUp) then
+    FOnKeyUp(Self, Key, Shift);
+end;
+
+function TCMTDateEdit.IsFocusInside: Boolean;
+var
+  Wnd: HWND;
+begin
+  Result := False;
+  Wnd := GetFocus;
+  if Wnd = 0 then Exit;
+
+  Result := (Wnd = Handle) or IsChild(Handle, Wnd);
 end;
 
 procedure TCMTDateEdit.SetText(const Value: string);
