@@ -47,6 +47,8 @@ begin
   FDecimals := 2;
   FAllowNegative := False;
 
+  FormatSettings := TFormatSettings.Create;
+
   AtualizarDisplayFormat;
 end;
 
@@ -97,10 +99,17 @@ begin
 end;
 
 function TCMTNumericEdit.Normalizar(const S: string): string;
+var
+  Tmp: string;
 begin
-  Result := Trim(S);
-  Result := StringReplace(Result, '.', FormatSettings.DecimalSeparator, [rfReplaceAll]);
-  Result := StringReplace(Result, ',', FormatSettings.DecimalSeparator, [rfReplaceAll]);
+  Tmp := Trim(S);
+
+  Tmp := StringReplace(Tmp, FormatSettings.ThousandSeparator, '', [rfReplaceAll]);
+
+  Tmp := StringReplace(Tmp, ',', FormatSettings.DecimalSeparator, [rfReplaceAll]);
+  Tmp := StringReplace(Tmp, '.', FormatSettings.DecimalSeparator, [rfReplaceAll]);
+
+  Result := Tmp;
 end;
 
 function TCMTNumericEdit.GetValue: Double;
@@ -125,8 +134,7 @@ end;
 
 procedure TCMTNumericEdit.AtualizarDisplayFormat;
 begin
-  if Trim(FDisplayFormat) = '' then
-    FDisplayFormat := '#,##0.' + StringOfChar('0', FDecimals);
+  FDisplayFormat := '#,##0.' + StringOfChar('0', FDecimals);
 end;
 
 procedure Register;

@@ -3,8 +3,9 @@
 interface
 
 uses
-  System.SysUtils, System.Classes,
+  System.Classes,
   Winapi.Windows,
+  System.DateUtils,
   Vcl.Controls, Vcl.ExtCtrls, Vcl.StdCtrls, Vcl.Mask,
   Vcl.ComCtrls, Vcl.Graphics,
   CMTCustomButton, Winapi.Messages, Vcl.Forms;
@@ -104,6 +105,9 @@ type
 procedure Register;
 
 implementation
+
+uses
+  System.SysUtils;
 
 procedure Register;
 begin
@@ -238,8 +242,15 @@ begin
 end;
 
 function TCMTDateEdit.GetDate: TDate;
+var
+  D: TDateTime;
 begin
-  Result := FPicker.Date;
+  if Trim(FEdit.Text) = '' then
+    Result := 0
+  else if TryStrToDate(FEdit.Text, D) then
+    Result := DateOf(D)
+  else
+    Result := 0;
 end;
 
 procedure TCMTDateEdit.SetDate(const Value: TDate);
@@ -250,7 +261,10 @@ begin
     FEdit.Text := FormatDateTime('dd/mm/yyyy', Value);
   end
   else
+  begin
     FEdit.Clear;
+    FPicker.Date := Date; // evita lixo interno
+  end;
 end;
 
 function TCMTDateEdit.GetText: string;
