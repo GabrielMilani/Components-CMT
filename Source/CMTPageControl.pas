@@ -3,7 +3,8 @@ unit CMTPageControl;
 interface
 
 uses
-  System.Classes, Vcl.ComCtrls, Vcl.Graphics, Vcl.Controls, Winapi.Windows, Vcl.Imaging.pngimage;
+  System.Classes, Vcl.ComCtrls, Vcl.Graphics, Vcl.Controls, Winapi.Windows, Vcl.Imaging.pngimage,
+  Winapi.Messages;
 
 type
   TBackgroundStyle = (bsStretch, bsCenter, bsTile);
@@ -18,6 +19,7 @@ type
     procedure SetBackgroundStyle(const Value: TBackgroundStyle);
   protected
     procedure PaintWindow(DC: HDC); override;
+    procedure WMEraseBkgnd(var Message: TWMEraseBkgnd); message WM_ERASEBKGND;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -36,13 +38,13 @@ begin
   RegisterComponents('CMT', [TCMTPageControl]);
 end;
 
-
 constructor TCMTPageControl.Create(AOwner: TComponent);
 begin
   inherited;
   FBackground := TPicture.Create;
   FBackgroundColor := clBtnFace;   // cor padrão
   FBackgroundStyle := bsStretch;   // estilo padrão
+  DoubleBuffered := True;          // reduz flicker em redesenhos
 end;
 
 destructor TCMTPageControl.Destroy;
@@ -131,6 +133,12 @@ begin
     FBackgroundStyle := Value;
     Invalidate;
   end;
+end;
+
+procedure TCMTPageControl.WMEraseBkgnd(var Message: TWMEraseBkgnd);
+begin
+  PaintWindow(Message.DC);
+  Message.Result := 1;
 end;
 
 end.

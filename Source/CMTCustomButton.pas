@@ -3,13 +3,17 @@ unit CMTCustomButton;
 interface
 
 uses
-  Vcl.Graphics, Winapi.Windows, System.Classes, System.SysUtils,
-  Vcl.Controls, Winapi.Messages;
+  Winapi.Windows,
+  Winapi.Messages,
+  System.Classes,
+  System.SysUtils,
+  Vcl.Graphics,
+  Vcl.Controls,
+  Vcl.Imaging.pngimage;
 
 type
   TImagePosition = (ipLeft, ipRight, ipTop, ipBottom);
 
-type
   TCMTCustomButton = class(TCustomControl)
   private
     // Aparência
@@ -20,6 +24,12 @@ type
     FActiveColor: TColor;
     FFocusBackColor: TColor;
     FCornerRadius: Integer;
+
+    // Estado desabilitado
+    FDisabledFontColor: TColor;
+    FDisabledImage: TPicture;
+    // Image pintada com DisabledFontColor (gerada sob demanda)
+    FDisabledIconCache: TPngImage;
 
     // Estados
     FHovering: Boolean;
@@ -45,18 +55,32 @@ type
     procedure SetHoverFontColor(Value: TColor);
     procedure SetCornerRadius(Value: Integer);
     procedure SetImage(Value: TPicture);
+    procedure SetDisabledImage(Value: TPicture);
+    procedure SetDisabledFontColor(Value: TColor);
     procedure SetImagePosition(Value: TImagePosition);
     procedure SetImageSpacing(Value: Integer);
     procedure SetTextAlignment(const Value: TAlignment);
     procedure SetCenterImageOnly(const Value: Boolean);
     procedure SetActive(const Value: Boolean);
 
-    procedure CMMouseEnter(var Message: TMessage); message CM_MOUSEENTER;
-    procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
+    procedure ImageChanged(Sender: TObject);
+    procedure ClearDisabledIconCache;
+    function DisabledIcon: TGraphic;
 
-    procedure WMLButtonDown(var Message: TWMLButtonDown); message WM_LBUTTONDOWN;
-    procedure WMSetFocus(var Message: TWMSetFocus); message WM_SETFOCUS;
-    procedure WMKillFocus(var Message: TWMKillFocus); message WM_KILLFOCUS;
+    procedure CMMouseEnter(var Message: TMessage);
+      message CM_MOUSEENTER;
+    procedure CMMouseLeave(var Message: TMessage);
+      message CM_MOUSELEAVE;
+
+    procedure CMEnabledChanged(var Message: TMessage);
+      message CM_ENABLEDCHANGED;
+
+    procedure WMLButtonDown(var Message: TWMLButtonDown);
+      message WM_LBUTTONDOWN;
+    procedure WMSetFocus(var Message: TWMSetFocus);
+      message WM_SETFOCUS;
+    procedure WMKillFocus(var Message: TWMKillFocus);
+      message WM_KILLFOCUS;
 
   protected
     procedure Paint; override;
@@ -98,7 +122,6 @@ type
     property OnEnter;
     property OnExit;
     property OnContextPopup;
-
     property OnMouseEnter;
     property OnMouseLeave;
     property OnMouseWheel;
@@ -106,30 +129,54 @@ type
     property OnMouseWheelUp;
 
     // Aparência
-    property BaseColor: TColor read FBaseColor write SetBaseColor default clSkyBlue;
-    property HoverColor: TColor read FHoverColor write SetHoverColor default clNavy;
-    property FontColor: TColor read FFontColor write SetFontColor default clWhite;
-    property HoverFontColor: TColor read FHoverFontColor write SetHoverFontColor default clWhite;
-    property ActiveColor: TColor read FActiveColor write FActiveColor default clNavy;
-    property FocusBackColor: TColor read FFocusBackColor write FFocusBackColor default clHighlight;
-    property CornerRadius: Integer read FCornerRadius write SetCornerRadius default 10;
+    property BaseColor: TColor
+      read FBaseColor write SetBaseColor default clSkyBlue;
+    property HoverColor: TColor
+      read FHoverColor write SetHoverColor default clNavy;
+    property FontColor: TColor
+      read FFontColor write SetFontColor default clWhite;
+    property HoverFontColor: TColor
+      read FHoverFontColor write SetHoverFontColor default clWhite;
+    property ActiveColor: TColor
+      read FActiveColor write FActiveColor default clNavy;
+    property FocusBackColor: TColor
+      read FFocusBackColor write FFocusBackColor default $002B2B2B;
+    property CornerRadius: Integer
+      read FCornerRadius write SetCornerRadius default 10;
+
+    // Estado desabilitado
+    property DisabledFontColor: TColor
+      read FDisabledFontColor
+      write SetDisabledFontColor default $006E6E6E;
+
+    property DisabledImage: TPicture
+      read FDisabledImage write SetDisabledImage;
 
     // Estados
-    property AllowActive: Boolean read FAllowActive write FAllowActive default True;
-    property Active: Boolean read FActive write SetActive;
+    property AllowActive: Boolean
+      read FAllowActive write FAllowActive default True;
+    property Active: Boolean
+      read FActive write SetActive;
 
     // Foco
-    property FocusOnClick: Boolean read FFocusOnClick write FFocusOnClick default True;
-    property UseFocusBackColor: Boolean read FUseFocusBackColor write FUseFocusBackColor default True;
+    property FocusOnClick: Boolean
+      read FFocusOnClick write FFocusOnClick default True;
+    property UseFocusBackColor: Boolean
+      read FUseFocusBackColor write FUseFocusBackColor default True;
 
     // Imagem
     property Image: TPicture read FImage write SetImage;
-    property ImagePosition: TImagePosition read FImagePosition write SetImagePosition default ipLeft;
-    property ImageSpacing: Integer read FImageSpacing write SetImageSpacing default 4;
-    property CenterImageOnly: Boolean read FCenterImageOnly write SetCenterImageOnly default False;
+    property ImagePosition: TImagePosition
+      read FImagePosition write SetImagePosition default ipLeft;
+    property ImageSpacing: Integer
+      read FImageSpacing write SetImageSpacing default 4;
+    property CenterImageOnly: Boolean
+      read FCenterImageOnly
+      write SetCenterImageOnly default False;
 
     // Texto
-    property TextAlignment: TAlignment read FTextAlignment write SetTextAlignment default taCenter;
+    property TextAlignment: TAlignment
+      read FTextAlignment write SetTextAlignment default taCenter;
   end;
 
 procedure Register;
@@ -171,6 +218,8 @@ begin
   FFocusBackColor := $002B2B2B;
   FCornerRadius := 10;
 
+  FDisabledFontColor := $006E6E6E;
+
   FAllowActive := True;
   FActive := False;
   FHovering := False;
@@ -181,6 +230,9 @@ begin
   FTextAlignment := taCenter;
 
   FImage := TPicture.Create;
+  FImage.OnChange := ImageChanged;
+  FDisabledImage := TPicture.Create;
+
   FImagePosition := ipLeft;
   FImageSpacing := 4;
   FCenterImageOnly := False;
@@ -188,15 +240,18 @@ end;
 
 destructor TCMTCustomButton.Destroy;
 begin
+  FDisabledIconCache.Free;
+  FDisabledImage.Free;
   FImage.Free;
-  inherited;
+  inherited Destroy;
 end;
 
 { FOCO }
 
 function TCMTCustomButton.CanFocus: Boolean;
 begin
-  Result := inherited CanFocus and TabStop and Enabled and Visible;
+  Result := inherited CanFocus and TabStop and
+    Enabled and Visible;
 end;
 
 procedure TCMTCustomButton.WMSetFocus(var Message: TWMSetFocus);
@@ -211,21 +266,34 @@ begin
   Invalidate;
 end;
 
-{ TECLADO / MOUSE }
+{ HABILITAR / DESABILITAR }
 
-procedure TCMTCustomButton.KeyDown(var Key: Word; Shift: TShiftState);
+procedure TCMTCustomButton.CMEnabledChanged(var Message: TMessage);
 begin
   inherited;
-  if (Key = VK_RETURN) or (Key = VK_SPACE) then
+  Invalidate;
+end;
+
+{ TECLADO / MOUSE }
+
+procedure TCMTCustomButton.KeyDown(
+  var Key: Word;
+  Shift: TShiftState);
+begin
+  inherited;
+
+  if Enabled and ((Key = VK_RETURN) or (Key = VK_SPACE)) then
   begin
     Click;
     Key := 0;
   end;
 end;
 
-procedure TCMTCustomButton.WMLButtonDown(var Message: TWMLButtonDown);
+procedure TCMTCustomButton.WMLButtonDown(
+  var Message: TWMLButtonDown);
 begin
   inherited;
+
   if FFocusOnClick and TabStop and CanFocus then
     SetFocus;
 end;
@@ -282,6 +350,16 @@ begin
   end;
 end;
 
+procedure TCMTCustomButton.SetDisabledFontColor(Value: TColor);
+begin
+  if FDisabledFontColor <> Value then
+  begin
+    FDisabledFontColor := Value;
+    ClearDisabledIconCache;
+    Invalidate;
+  end;
+end;
+
 procedure TCMTCustomButton.SetCornerRadius(Value: Integer);
 begin
   if FCornerRadius <> Value then
@@ -294,6 +372,12 @@ end;
 procedure TCMTCustomButton.SetImage(Value: TPicture);
 begin
   FImage.Assign(Value);
+  Invalidate;
+end;
+
+procedure TCMTCustomButton.SetDisabledImage(Value: TPicture);
+begin
+  FDisabledImage.Assign(Value);
   Invalidate;
 end;
 
@@ -315,7 +399,8 @@ begin
   end;
 end;
 
-procedure TCMTCustomButton.SetTextAlignment(const Value: TAlignment);
+procedure TCMTCustomButton.SetTextAlignment(
+  const Value: TAlignment);
 begin
   if FTextAlignment <> Value then
   begin
@@ -324,7 +409,8 @@ begin
   end;
 end;
 
-procedure TCMTCustomButton.SetCenterImageOnly(const Value: Boolean);
+procedure TCMTCustomButton.SetCenterImageOnly(
+  const Value: Boolean);
 begin
   if FCenterImageOnly <> Value then
   begin
@@ -345,6 +431,65 @@ begin
   end;
 end;
 
+{ ICONE DESABILITADO }
+
+procedure TCMTCustomButton.ImageChanged(Sender: TObject);
+begin
+  // Tambem cobre a troca do PNG feita pelo tema (Image.Assign).
+  ClearDisabledIconCache;
+  Invalidate;
+end;
+
+procedure TCMTCustomButton.ClearDisabledIconCache;
+begin
+  FreeAndNil(FDisabledIconCache);
+end;
+
+// Copia da Image com todos os pixels em DisabledFontColor e o alfa
+// preservado. PNG que nao for RGBA de 8 bits e desenhado como esta
+// (pintar tudo de uma cor viraria um quadrado).
+function TCMTCustomButton.DisabledIcon: TGraphic;
+var
+  Png: TPngImage;
+  Line: PByteArray;
+  X, Y: Integer;
+  DisabledColor: TColor;
+begin
+  Result := FImage.Graphic;
+
+  if not (FImage.Graphic is TPngImage) then
+    Exit;
+
+  Png := TPngImage(FImage.Graphic);
+
+  if (Png.Header.BitDepth <> 8)
+    or (Png.Header.ColorType <> COLOR_RGBALPHA) then
+    Exit;
+
+  if not Assigned(FDisabledIconCache) then
+  begin
+    DisabledColor := ColorToRGB(FDisabledFontColor);
+
+    FDisabledIconCache := TPngImage.Create;
+    FDisabledIconCache.Assign(Png);
+
+    // Scanline: 3 bytes por pixel (B, G, R); o alfa fica em AlphaScanline.
+    for Y := 0 to FDisabledIconCache.Height - 1 do
+    begin
+      Line := FDisabledIconCache.Scanline[Y];
+
+      for X := 0 to FDisabledIconCache.Width - 1 do
+      begin
+        Line^[X * 3] := GetBValue(DisabledColor);
+        Line^[X * 3 + 1] := GetGValue(DisabledColor);
+        Line^[X * 3 + 2] := GetRValue(DisabledColor);
+      end;
+    end;
+  end;
+
+  Result := FDisabledIconCache;
+end;
+
 { PINTURA }
 
 procedure TCMTCustomButton.Paint;
@@ -353,25 +498,22 @@ var
   BgColor, TxtColor: TColor;
   Flags: Longint;
   ImgW, ImgH, TotalHeight: Integer;
+  GraphicToDraw: TGraphic;
 begin
   R := ClientRect;
 
-  if not Enabled then
-  begin
-    BgColor := clBtnShadow;
-    TxtColor := clBtnHighlight;
-  end
-  else if Focused and TabStop and FUseFocusBackColor then
+  // Mantém o fundo normal mesmo quando desabilitado.
+  if Enabled and Focused and TabStop and FUseFocusBackColor then
   begin
     BgColor := FFocusBackColor;
     TxtColor := FHoverFontColor;
   end
-  else if FActive then
+  else if Enabled and FActive then
   begin
     BgColor := FActiveColor;
     TxtColor := FHoverFontColor;
   end
-  else if FHovering then
+  else if Enabled and FHovering then
   begin
     BgColor := FHoverColor;
     TxtColor := FHoverFontColor;
@@ -382,9 +524,17 @@ begin
     TxtColor := FFontColor;
   end;
 
+  // Muda somente a cor do texto.
+  if not Enabled then
+    TxtColor := FDisabledFontColor;
+
   Canvas.Brush.Color := BgColor;
   Canvas.Pen.Style := psClear;
-  Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, FCornerRadius, FCornerRadius);
+
+  Canvas.RoundRect(
+    R.Left, R.Top, R.Right, R.Bottom,
+    FCornerRadius, FCornerRadius
+  );
 
   Canvas.Font.Assign(Font);
   Canvas.Font.Color := TxtColor;
@@ -394,62 +544,124 @@ begin
   ImgRect := Rect(0, 0, 0, 0);
   TextRect := R;
 
-  if Assigned(FImage.Graphic) and not FImage.Graphic.Empty then
-  begin
-    ImgW := FImage.Width;
-    ImgH := FImage.Height;
+  GraphicToDraw := nil;
 
+  // Escolhe o PNG para o estado atual: DisabledImage explicita tem
+  // prioridade; sem ela, a Image pintada com DisabledFontColor.
+  if not Enabled
+    and Assigned(FDisabledImage.Graphic)
+    and not FDisabledImage.Graphic.Empty then
+    GraphicToDraw := FDisabledImage.Graphic
+  else if not Enabled
+    and Assigned(FImage.Graphic)
+    and not FImage.Graphic.Empty then
+    GraphicToDraw := DisabledIcon
+  else if Assigned(FImage.Graphic)
+    and not FImage.Graphic.Empty then
+    GraphicToDraw := FImage.Graphic;
+
+  if Assigned(GraphicToDraw) then
+  begin
+    ImgW := GraphicToDraw.Width;
+    ImgH := GraphicToDraw.Height;
+
+    // Botão somente com ícone.
     if Caption = '' then
     begin
       ImgRect := Rect(
         (R.Width - ImgW) div 2,
         (R.Height - ImgH) div 2,
-        0, 0
+        (R.Width + ImgW) div 2,
+        (R.Height + ImgH) div 2
       );
-      Canvas.Draw(ImgRect.Left, ImgRect.Top, FImage.Graphic);
+
+      Canvas.Draw(
+        ImgRect.Left,
+        ImgRect.Top,
+        GraphicToDraw
+      );
+
       Exit;
     end;
 
+    // Posicionamento do ícone e do texto.
     case FImagePosition of
       ipLeft:
         begin
           ImgRect.Left := R.Left + 8;
           ImgRect.Top := (R.Height - ImgH) div 2;
-          TextRect.Left := ImgRect.Left + ImgW + FImageSpacing;
+
+          TextRect.Left :=
+            ImgRect.Left + ImgW + FImageSpacing;
         end;
+
       ipRight:
         begin
           ImgRect.Left := R.Right - ImgW - 8;
           ImgRect.Top := (R.Height - ImgH) div 2;
-          TextRect.Right := ImgRect.Left - FImageSpacing;
+
+          TextRect.Right :=
+            ImgRect.Left - FImageSpacing;
         end;
+
       ipTop:
         begin
-          TotalHeight := ImgH + FImageSpacing + Canvas.TextHeight(Caption);
+          TotalHeight :=
+            ImgH + FImageSpacing + Canvas.TextHeight(Caption);
+
           ImgRect.Top := (R.Height - TotalHeight) div 2;
           ImgRect.Left := (R.Width - ImgW) div 2;
-          TextRect.Top := ImgRect.Top + ImgH + FImageSpacing;
+
+          TextRect.Top :=
+            ImgRect.Top + ImgH + FImageSpacing;
         end;
+
       ipBottom:
         begin
-          TotalHeight := ImgH + FImageSpacing + Canvas.TextHeight(Caption);
+          TotalHeight :=
+            ImgH + FImageSpacing + Canvas.TextHeight(Caption);
+
           TextRect.Top := (R.Height - TotalHeight) div 2;
-          ImgRect.Top := TextRect.Top + Canvas.TextHeight(Caption) + FImageSpacing;
+
+          ImgRect.Top :=
+            TextRect.Top + Canvas.TextHeight(Caption)
+            + FImageSpacing;
+
           ImgRect.Left := (R.Width - ImgW) div 2;
         end;
     end;
 
-    Canvas.Draw(ImgRect.Left, ImgRect.Top, FImage.Graphic);
+    ImgRect.Right := ImgRect.Left + ImgW;
+    ImgRect.Bottom := ImgRect.Top + ImgH;
+
+    Canvas.Draw(
+      ImgRect.Left,
+      ImgRect.Top,
+      GraphicToDraw
+    );
   end;
 
+  // Alinhamento do Caption.
   Flags := DT_SINGLELINE or DT_VCENTER;
+
   case FTextAlignment of
-    taLeftJustify:  Flags := Flags or DT_LEFT;
-    taCenter:       Flags := Flags or DT_CENTER;
-    taRightJustify: Flags := Flags or DT_RIGHT;
+    taLeftJustify:
+      Flags := Flags or DT_LEFT;
+
+    taCenter:
+      Flags := Flags or DT_CENTER;
+
+    taRightJustify:
+      Flags := Flags or DT_RIGHT;
   end;
 
-  DrawText(Canvas.Handle, PChar(Caption), -1, TextRect, Flags);
+  DrawText(
+    Canvas.Handle,
+    PChar(Caption),
+    -1,
+    TextRect,
+    Flags
+  );
 end;
 
 procedure TCMTCustomButton.Resize;
@@ -466,7 +678,10 @@ end;
 
 procedure TCMTCustomButton.Click;
 begin
-  inherited;
+  if not Enabled then
+    Exit;
+
+  inherited Click;
 end;
 
 end.

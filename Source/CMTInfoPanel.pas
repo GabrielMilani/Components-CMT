@@ -20,6 +20,7 @@ type
 
     // Valor lógico
     FValue: Currency;
+    FDecimals: Integer;
 
     // Aparência
     FBarColor: TColor;
@@ -44,6 +45,7 @@ type
 
     procedure SetTitle(const Value: string);
     procedure SetValue(const Value: Currency);
+    procedure SetDecimals(const Value: Integer);
 
     function GetTitle: string;
     function GetValue: Currency;
@@ -70,6 +72,7 @@ type
     // Conteúdo
     property Title: string read GetTitle write SetTitle;
     property Value: Currency read GetValue write SetValue;
+    property Decimals: Integer read FDecimals write SetDecimals default 2;
 
     // Visual
     property BarColor: TColor read FBarColor write SetBarColor default clRed;
@@ -120,6 +123,7 @@ begin
 
   // Valor inicial
   FValue := 0;
+  FDecimals := 2;
 
   // ===== TÍTULO =====
   FTitleLabel := TLabel.Create(Self);
@@ -259,6 +263,22 @@ begin
   FValue := Value;
   if Assigned(FValueEdit) then
     FValueEdit.Value := Value;
+end;
+
+procedure TCMTInfoPanel.SetDecimals(const Value: Integer);
+begin
+  if Value < 0 then
+    FDecimals := 0
+  else
+    FDecimals := Value;
+
+  if Assigned(FValueEdit) then
+  begin
+    FValueEdit.Decimals := FDecimals;
+    if FDecimals = 0 then
+      FValueEdit.DisplayFormat := '#,##0';
+    FValueEdit.Value := FValue;
+  end;
 end;
 
 function TCMTInfoPanel.GetTitle: string;
