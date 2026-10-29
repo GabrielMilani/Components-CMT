@@ -34,7 +34,8 @@ requires
   dbrtl,
   vclwinx,
   vclimg,
-  bindengine;
+  bindengine,
+  designide;
 
 contains
   CMTButton in 'Source\CMTButton.pas',
@@ -45,6 +46,7 @@ contains
   CMTDateTimePicker in 'Source\CMTDateTimePicker.pas',
   CMTRadioButton in 'Source\CMTRadioButton.pas',
   CMTNumericEdit in 'Source\CMTNumericEdit.pas',
-  CMTInfoPanel in 'Source\CMTInfoPanel.pas';
+  CMTInfoPanel in 'Source\CMTInfoPanel.pas',
+  CMTReg in 'Design\CMTReg.pas';
 
 end.

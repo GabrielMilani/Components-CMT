@@ -98,6 +98,7 @@
         <DCCReference Include="vclwinx.dcp"/>
         <DCCReference Include="vclimg.dcp"/>
         <DCCReference Include="bindengine.dcp"/>
+        <DCCReference Include="designide.dcp"/>
         <DCCReference Include="Source\CMTButton.pas"/>
         <DCCReference Include="Source\CMTDBGrid.pas"/>
         <DCCReference Include="Source\CMTCustomButton.pas"/>
@@ -107,6 +108,7 @@
         <DCCReference Include="Source\CMTRadioButton.pas"/>
         <DCCReference Include="Source\CMTNumericEdit.pas"/>
         <DCCReference Include="Source\CMTInfoPanel.pas"/>
+        <DCCReference Include="Design\CMTReg.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

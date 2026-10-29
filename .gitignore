@@ -48,3 +48,5 @@ Win64/Release/
 # Arquivos gerados por instalação de pacotes
 *.drc
 *.hpp
+# Ícones do pacote na IDE (gerado por Design\Gerar-Icones.ps1, precisa ir para o repositório)
+!Design/CMTIcones.res
