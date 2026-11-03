@@ -44,6 +44,8 @@ contains
   CMTCustomButton in 'Source\CMTCustomButton.pas',
   CMTPageControl in 'Source\CMTPageControl.pas',
   CMTMaskEdit in 'Source\CMTMaskEdit.pas',
+  CMTDateEditRegras in 'Source\CMTDateEditRegras.pas',
+  CMTDateEditCalendario in 'Source\CMTDateEditCalendario.pas',
   CMTDateTimePicker in 'Source\CMTDateTimePicker.pas',
   CMTRadioButton in 'Source\CMTRadioButton.pas',
   CMTNumericEdit in 'Source\CMTNumericEdit.pas',
