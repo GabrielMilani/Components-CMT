@@ -332,7 +332,9 @@ procedure TCMTDateEdit.AjustarEdit;
 var
   vEsquerda, vReservado, vEspaco, vAltura: Integer;
 begin
-  if not Assigned(FEdit) then
+  // Sem janela ainda (campo criado por código, antes de ter pai): ClientHeight pediria a
+  // janela e daria "has no parent window". O CreateWnd do edit chama de novo depois
+  if not Assigned(FEdit) or not HandleAllocated then
     Exit;
 
   vEsquerda := ScaleValue(MARGEM_TEXTO);
